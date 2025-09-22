@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -16,6 +16,7 @@ import { auth, firestore } from '@/lib/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { useAuth } from '@/hooks/use-auth';
+import { Eye, EyeOff } from 'lucide-react';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
@@ -28,6 +29,7 @@ function LoginContent() {
   const router = useRouter();
   const { toast } = useToast();
   const { user, loading } = useAuth();
+  const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -111,11 +113,22 @@ function LoginContent() {
                 name="password"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} />
-                    </FormControl>
-                    <FormMessage />
+                        <FormLabel>Password</FormLabel>
+                        <FormControl>
+                        <div className="relative">
+                            <Input type={showPassword ? 'text' : 'password'} placeholder="••••••••" {...field} />
+                            <Button 
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground hover:bg-transparent"
+                            onClick={() => setShowPassword(prev => !prev)}
+                            >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </Button>
+                        </div>
+                        </FormControl>
+                        <FormMessage />
                     </FormItem>
                 )}
                 />
