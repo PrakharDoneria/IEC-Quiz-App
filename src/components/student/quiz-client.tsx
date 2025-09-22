@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, usePathname, notFound } from 'next/navigation';
 import type { Quiz } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,19 +10,53 @@ import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { AlertDialog, AlertDialogCancel, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { firestore, auth } from '@/lib/firebase';
-import { addDoc, collection, serverTimestamp, getDoc, doc } from 'firebase/firestore';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 
 type Answers = Record<string, string>;
 
-export function QuizClient({ quiz }: { quiz: Quiz }) {
+interface QuizClientProps {
+    quiz: Quiz;
+    questionNumber: number;
+}
+
+export function QuizClient({ quiz, questionNumber }: QuizClientProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const { toast } = useToast();
   const { user, userProfile } = useAuth();
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [answers, setAnswers] = useState<Answers>({});
+  
+  const [answers, setAnswers] = useState<Answers>(() => {
+    if (typeof window !== 'undefined') {
+        const savedAnswers = sessionStorage.getItem(`quiz-${quiz.id}-answers`);
+        return savedAnswers ? JSON.parse(savedAnswers) : {};
+    }
+    return {};
+  });
+
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const currentQuestionIndex = questionNumber - 1;
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+        sessionStorage.setItem(`quiz-${quiz.id}-answers`, JSON.stringify(answers));
+    }
+  }, [answers, quiz.id]);
+
+  if (currentQuestionIndex < 0 || currentQuestionIndex >= quiz.questions.length) {
+    return notFound();
+  }
+
+  // Prevent skipping questions
+  const highestAnsweredIndex = Object.keys(answers).length > 0
+    ? Math.max(...Object.keys(answers).map(qId => quiz.questions.findIndex(q => q.id === qId)))
+    : -1;
+  
+  if (currentQuestionIndex > highestAnsweredIndex + 1) {
+    router.replace(`${pathname}?question=${highestAnsweredIndex + 2}`);
+    return null; // or a loading spinner
+  }
   
   const currentQuestion = quiz.questions[currentQuestionIndex];
   const progress = ((currentQuestionIndex + 1) / quiz.questions.length) * 100;
@@ -32,18 +66,34 @@ export function QuizClient({ quiz }: { quiz: Quiz }) {
   };
 
   const handleNext = () => {
+    if (!answers[currentQuestion.id]) {
+        toast({
+            variant: "destructive",
+            title: "Please select an answer",
+            description: "You must select an answer before proceeding.",
+        });
+        return;
+    }
     if (currentQuestionIndex < quiz.questions.length - 1) {
-      setCurrentQuestionIndex(prev => prev + 1);
+      router.push(`${pathname}?question=${questionNumber + 1}`);
     }
   };
 
   const handlePrevious = () => {
     if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(prev => prev - 1);
+      router.push(`${pathname}?question=${questionNumber - 1}`);
     }
   };
   
   const handleSubmit = async () => {
+    if (Object.keys(answers).length !== quiz.questions.length) {
+        toast({
+            variant: "destructive",
+            title: "Incomplete Quiz",
+            description: "Please answer all questions before submitting.",
+        });
+        return;
+    }
     setIsSubmitting(true);
 
     if (!user || !userProfile) {
@@ -77,6 +127,10 @@ export function QuizClient({ quiz }: { quiz: Quiz }) {
         };
 
         const docRef = await addDoc(collection(firestore, "results"), resultData);
+        
+        if (typeof window !== 'undefined') {
+            sessionStorage.removeItem(`quiz-${quiz.id}-answers`);
+        }
 
         router.push(`/student/result/${docRef.id}?score=${score}&total=${quiz.questions.length}`);
     } catch (error: any) {
@@ -124,7 +178,7 @@ export function QuizClient({ quiz }: { quiz: Quiz }) {
                 {currentQuestionIndex === quiz.questions.length - 1 ? (
                     <AlertDialog>
                         <AlertDialogTrigger asChild>
-                            <Button className="bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isSubmitting}>
+                            <Button className="bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isSubmitting || !answers[currentQuestion.id]}>
                                 {isSubmitting ? 'Submitting...' : 'Submit Quiz'}
                             </Button>
                         </AlertDialogTrigger>

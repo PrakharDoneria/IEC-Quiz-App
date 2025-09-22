@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { notFound, useParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
+import { notFound, useParams, useSearchParams } from 'next/navigation';
 import { QuizClient } from '@/components/student/quiz-client';
 import { StudentLayout } from '@/components/student/student-layout';
 import { firestore } from '@/lib/firebase';
@@ -9,11 +9,15 @@ import { doc, getDoc } from 'firebase/firestore';
 import type { Quiz } from '@/lib/data';
 import { Skeleton } from '@/components/ui/skeleton';
 
-export default function QuizPage() {
+function QuizPageContent() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const id = params.id as string;
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const questionParam = searchParams.get('question');
+  const questionNumber = questionParam ? parseInt(questionParam, 10) : 1;
 
   useEffect(() => {
     if (!id) return;
@@ -67,7 +71,23 @@ export default function QuizPage() {
 
   return (
     <StudentLayout>
-      <QuizClient quiz={quiz} />
+      <QuizClient quiz={quiz} questionNumber={questionNumber} />
     </StudentLayout>
   );
+}
+
+export default function QuizPage() {
+    return (
+        <Suspense fallback={
+            <StudentLayout>
+                <div className="flex-1 flex flex-col justify-center items-center">
+                    <div className="w-full max-w-2xl space-y-4">
+                        <Skeleton className="h-8 w-1/2 mx-auto" />
+                    </div>
+                </div>
+            </StudentLayout>
+        }>
+            <QuizPageContent />
+        </Suspense>
+    )
 }
