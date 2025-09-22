@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, FileText, Target, Activity } from "lucide-react";
+import { Users, FileText, Target } from "lucide-react";
 import { firestore } from '@/lib/firebase';
 import { collection, getDocs, query, where, limit, orderBy } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -46,20 +46,20 @@ export default function AdminDashboard() {
         const fetchData = async () => {
             setLoading(true);
             try {
-                // Fetch quizzes
-                const quizzesSnapshot = await getDocs(collection(firestore, 'quizzes'));
-                const totalQuizzes = quizzesSnapshot.size;
+                // Fetch all data in parallel
+                const [quizzesSnapshot, studentsSnapshot, recentResultsSnapshot] = await Promise.all([
+                  getDocs(collection(firestore, 'quizzes')),
+                  getDocs(query(collection(firestore, 'users'), where('role', '==', 'student'))),
+                  getDocs(query(collection(firestore, 'results'), orderBy('createdAt', 'desc'), limit(100))) // Fetch recent 100 results for calculation
+                ]);
 
-                // Fetch students
-                const studentsQuery = query(collection(firestore, 'users'), where('role', '==', 'student'));
-                const studentsSnapshot = await getDocs(studentsQuery);
+                const totalQuizzes = quizzesSnapshot.size;
                 const totalStudents = studentsSnapshot.size;
 
-                // Fetch results for average score and recent activity
-                const resultsSnapshot = await getDocs(collection(firestore, 'results'));
+                // Calculate average score from recent results
                 let totalScore = 0;
                 let totalPossibleScore = 0;
-                resultsSnapshot.forEach(doc => {
+                recentResultsSnapshot.forEach(doc => {
                     totalScore += doc.data().score;
                     totalPossibleScore += doc.data().total;
                 });
@@ -71,16 +71,13 @@ export default function AdminDashboard() {
                     averageScore,
                 });
                 
-                // Fetch recent results
-                const recentResultsQuery = query(collection(firestore, 'results'), orderBy('createdAt', 'desc'), limit(5));
-                const recentResultsSnapshot = await getDocs(recentResultsQuery);
-                
+                // Process recent results for display (top 5)
                 const quizzesData: {[id: string]: string} = {};
                 quizzesSnapshot.docs.forEach(doc => {
                     quizzesData[doc.id] = doc.data().title;
                 });
 
-                const recentResultsData = recentResultsSnapshot.docs.map(doc => {
+                const recentResultsData = recentResultsSnapshot.docs.slice(0, 5).map(doc => {
                     const data = doc.data();
                     return {
                         id: doc.id,
@@ -215,5 +212,3 @@ export default function AdminDashboard() {
     </div>
   );
 }
-
-    

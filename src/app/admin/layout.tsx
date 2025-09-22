@@ -1,5 +1,10 @@
-'use client';
 
+'use client';
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 import {
   SidebarProvider,
   Sidebar,
@@ -14,13 +19,14 @@ import {
 import { Logo } from '@/components/logo';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Home, Upload, BarChart2, FileOutput, LogOut } from 'lucide-react';
+import { Home, Upload, BarChart2, FileOutput, LogOut, PanelLeft } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { auth } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useState } from 'react';
 
 const navItems = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: Home },
@@ -29,10 +35,34 @@ const navItems = [
   { href: '/admin/export', label: 'Export Data', icon: FileOutput },
 ];
 
+function NavContent({ onLinkClick }: { onLinkClick?: () => void }) {
+    const pathname = usePathname();
+    return (
+        <>
+            {navItems.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                <Link href={item.href} onClick={onLinkClick}>
+                    <SidebarMenuButton
+                    isActive={pathname.startsWith(item.href)}
+                    tooltip={{ children: item.label }}
+                    >
+                    <item.icon />
+                    <span>{item.label}</span>
+                    </SidebarMenuButton>
+                </Link>
+                </SidebarMenuItem>
+            ))}
+        </>
+    )
+}
+
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, userProfile, loading } = useAuth();
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
+
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -51,19 +81,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
-            {navItems.map((item) => (
-              <SidebarMenuItem key={item.href}>
-                <Link href={item.href}>
-                  <SidebarMenuButton
-                    isActive={pathname.startsWith(item.href)}
-                    tooltip={{ children: item.label }}
-                  >
-                    <item.icon />
-                    <span>{item.label}</span>
-                  </SidebarMenuButton>
-                </Link>
-              </SidebarMenuItem>
-            ))}
+            <NavContent />
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter className='items-center'>
@@ -93,6 +111,27 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
+        <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6 md:hidden">
+            <Sheet open={mobileSheetOpen} onOpenChange={setMobileSheetOpen}>
+                <SheetTrigger asChild>
+                    <Button size="icon" variant="outline" className="sm:hidden">
+                        <PanelLeft className="h-5 w-5" />
+                        <span className="sr-only">Toggle Menu</span>
+                    </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="sm:max-w-xs bg-sidebar text-sidebar-foreground border-sidebar-border">
+                     <SidebarHeader className='!p-0 !px-2.5'>
+                        <Logo />
+                    </SidebarHeader>
+                     <SidebarContent className='!p-0 !px-2.5 mt-4'>
+                        <SidebarMenu>
+                            <NavContent onLinkClick={() => setMobileSheetOpen(false)} />
+                        </SidebarMenu>
+                    </SidebarContent>
+                </SheetContent>
+            </Sheet>
+             <h1 className="font-semibold text-lg">IEC Quiz Admin</h1>
+        </header>
         <main className="p-4 sm:p-6 lg:p-8">
           {children}
         </main>
