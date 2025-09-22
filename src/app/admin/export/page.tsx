@@ -1,5 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileOutput } from 'lucide-react';
+import { ExportClient } from '@/components/admin/export-client';
 
 export default function ExportPage() {
   return (
@@ -17,14 +18,14 @@ export default function ExportPage() {
             <FileOutput className="h-6 w-6 text-primary" />
           </div>
           <div>
-            <CardTitle>Data Export</CardTitle>
+            <CardTitle>AI-Powered Data Export</CardTitle>
             <CardDescription>
-              The AI-powered data export tool has been removed.
+              Use AI to generate custom exports of student data.
             </CardDescription>
           </div>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">This feature is no longer available.</p>
+          <ExportClient />
         </CardContent>
       </Card>
     </div>
