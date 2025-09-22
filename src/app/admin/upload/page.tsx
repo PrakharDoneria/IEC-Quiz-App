@@ -29,6 +29,11 @@ export default function UploadQuizPage() {
   
   const form = useForm<UploadFormValues>({
     resolver: zodResolver(uploadSchema),
+    defaultValues: {
+      title: '',
+      code: '',
+      file: null,
+    }
   });
   
   const fileRef = form.register('file');
@@ -99,6 +104,10 @@ export default function UploadQuizPage() {
             description: `Quiz "${data.title}" with code "${data.code}" has been created.`,
         });
         form.reset({title: '', code: '', file: null});
+        // This will allow a user to re-upload the same file name
+        if(fileRef?.ref) {
+            (fileRef.ref as HTMLInputElement).value = '';
+        }
         setTemplateDownloaded(false);
     } catch (error) {
         console.error("Error processing file or adding document: ", error);
