@@ -1,4 +1,3 @@
-import { ExportClient } from '@/components/admin/export-client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileOutput } from 'lucide-react';
 
@@ -8,7 +7,7 @@ export default function ExportPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Export Student Data</h1>
         <p className="text-muted-foreground">
-          Generate and download student data reports in Excel format.
+          Generate and download student data reports.
         </p>
       </div>
 
@@ -18,15 +17,14 @@ export default function ExportPage() {
             <FileOutput className="h-6 w-6 text-primary" />
           </div>
           <div>
-            <CardTitle>Data Export Tool</CardTitle>
+            <CardTitle>Data Export</CardTitle>
             <CardDescription>
-              Use the AI-powered tool to export data with specific filters. The
-              tool will generate an Excel file for you to download.
+              The AI-powered data export tool has been removed.
             </CardDescription>
           </div>
         </CardHeader>
         <CardContent>
-          <ExportClient />
+          <p className="text-sm text-muted-foreground">This feature is no longer available.</p>
         </CardContent>
       </Card>
     </div>
