@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { AuthLayout } from '@/components/auth-layout';
 import { auth, firestore } from '@/lib/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { useAuth } from '@/hooks/use-auth';
 import { Eye, EyeOff } from 'lucide-react';
@@ -55,11 +55,12 @@ function LoginContent() {
       const user = userCredential.user;
 
       if (!user.emailVerified) {
+          await sendEmailVerification(user);
           await auth.signOut();
           toast({
             variant: 'destructive',
-            title: 'Email Not Verified',
-            description: "Please verify your email before logging in. Check your inbox for a verification link."
+            title: 'Verification Email Sent',
+            description: "Your email is not verified. We've sent a new verification link to your inbox."
           });
           return;
       }

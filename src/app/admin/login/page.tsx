@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { AuthLayout } from '@/components/auth-layout';
 import { auth } from '@/lib/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { useAuth } from '@/hooks/use-auth';
 import { Eye, EyeOff } from 'lucide-react';
 
@@ -51,11 +51,12 @@ export default function AdminLoginPage() {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
       if (!userCredential.user.emailVerified) {
+        await sendEmailVerification(userCredential.user);
         await auth.signOut();
         toast({
             variant: 'destructive',
-            title: 'Email Not Verified',
-            description: "Please verify your email before logging in."
+            title: 'Verification Email Sent',
+            description: "Your email is not verified. We've sent a new verification link to your inbox."
         });
         return;
       }
