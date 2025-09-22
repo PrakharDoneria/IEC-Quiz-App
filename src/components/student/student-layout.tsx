@@ -59,7 +59,7 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
                         <Logo className="hidden md:flex" />
                     </Link>
                      <div className="md:hidden">
-                        <span className="font-bold">QuizVerse</span>
+                        <span className="font-bold">IEC Quiz</span>
                     </div>
 
                     <DropdownMenu>

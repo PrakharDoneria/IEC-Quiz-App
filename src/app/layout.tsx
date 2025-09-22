@@ -12,7 +12,7 @@ const ptSans = PT_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'QuizVerse',
+  title: 'IEC Quiz',
   description: 'A modern quiz application for students and admins.',
 };
 

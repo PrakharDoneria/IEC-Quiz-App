@@ -1,39 +1,63 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowRight } from 'lucide-react';
 import { Logo } from '@/components/logo';
+import Image from 'next/image';
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md">
-        <Card className="shadow-lg">
-          <CardHeader className="items-center text-center">
-            <Logo />
-            <CardTitle className="text-3xl font-bold tracking-tight text-primary">
-              Welcome to QuizVerse
-            </CardTitle>
-            <CardDescription className="text-muted-foreground">
-              Your gateway to knowledge and competition.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col space-y-4">
-            <Link href="/login" passHref>
-              <Button variant="outline" className="w-full justify-between">
-                Student Portal <ArrowRight />
-              </Button>
-            </Link>
-            <Link href="/admin/login" passHref>
-              <Button variant="outline" className="w-full justify-between">
-                Admin Portal <ArrowRight />
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
-      <footer className="absolute bottom-4 text-sm text-muted-foreground">
-        <p>&copy; {new Date().getFullYear()} QuizVerse. All rights reserved.</p>
+    <div className="flex min-h-screen flex-col bg-background">
+      <header className="container mx-auto flex h-20 items-center justify-between px-4">
+        <Logo />
+        <div className="flex items-center gap-2">
+           <Link href="/login" passHref>
+            <Button variant="ghost">Student Login</Button>
+          </Link>
+          <Link href="/admin/login" passHref>
+            <Button>Admin Portal</Button>
+          </Link>
+        </div>
+      </header>
+
+      <main className="flex-1">
+        <section className="container mx-auto grid grid-cols-1 items-center gap-12 px-4 py-16 md:grid-cols-2 lg:py-24">
+          <div className="space-y-6">
+            <h1 className="text-4xl font-bold tracking-tight md:text-5xl lg:text-6xl">
+              Welcome to the <span className="text-primary">IEC Quiz</span> Platform
+            </h1>
+            <p className="text-lg text-muted-foreground">
+              Your gateway to knowledge and competition. Engage in challenging quizzes, track your progress, and compete with peers.
+            </p>
+            <div className="flex flex-col gap-4 sm:flex-row">
+              <Link href="/login" passHref>
+                <Button size="lg" className="w-full justify-between sm:w-auto">
+                  Student Portal <ArrowRight />
+                </Button>
+              </Link>
+              <Link href="/signup" passHref>
+                <Button size="lg" variant="outline" className="w-full sm:w-auto">
+                  Sign Up Now
+                </Button>
+              </Link>
+            </div>
+          </div>
+          <div className="flex justify-center">
+            <Image 
+              src="https://picsum.photos/seed/quiz/600/400"
+              alt="Students taking a quiz"
+              width={600}
+              height={400}
+              className="rounded-lg shadow-xl"
+              data-ai-hint="education learning"
+            />
+          </div>
+        </section>
+      </main>
+
+      <footer className="container mx-auto flex items-center justify-center border-t py-4">
+        <p className="text-sm text-muted-foreground">
+          &copy; {new Date().getFullYear()} IEC Group of Institutions. All rights reserved.
+        </p>
       </footer>
     </div>
   );

@@ -54,7 +54,7 @@ export default function SignupPage() {
             role: 'student',
         });
 
-        toast({ title: 'Account Created', description: 'Welcome to QuizVerse!' });
+        toast({ title: 'Account Created', description: 'Welcome to IEC Quiz!' });
         router.push('/student/dashboard');
     } catch (error: any) {
         console.error('Signup Error:', error);
@@ -71,7 +71,7 @@ export default function SignupPage() {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Create a Student Account</CardTitle>
-          <CardDescription>Join QuizVerse to start your learning journey.</CardDescription>
+          <CardDescription>Join IEC Quiz to start your learning journey.</CardDescription>
         </CardHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSignup)}>
