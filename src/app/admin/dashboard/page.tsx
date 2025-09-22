@@ -14,17 +14,15 @@ const stats = [
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const { user, userProfile, loading } = useAuth();
+  const { user, loading } = useAuth();
 
   useEffect(() => {
-    if (!loading) {
-      if (!user || userProfile?.role !== 'admin') {
-        router.replace('/admin/login');
-      }
+    if (!loading && !user) {
+      router.replace('/admin/login');
     }
-  }, [user, userProfile, loading, router]);
+  }, [user, loading, router]);
 
-  if (loading || !user || !userProfile) {
+  if (loading || !user) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="flex items-center space-x-2">

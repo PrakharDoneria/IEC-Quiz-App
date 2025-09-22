@@ -39,11 +39,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     router.push('/admin/login');
   };
   
-  // The login page should not be wrapped in the sidebar and auth-gated content
   if (pathname === '/admin/login') {
     return <>{children}</>;
   }
-
 
   return (
     <SidebarProvider>
@@ -71,7 +69,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <SidebarFooter className='items-center'>
            <div className='flex items-center gap-2 w-full p-2 rounded-md hover:bg-sidebar-accent transition-colors'>
                 <Avatar className="h-8 w-8">
-                    <AvatarImage src={`https://i.pravatar.cc/150?u=${user?.uid}`} alt={userProfile?.name} />
+                    <AvatarImage src={userProfile?.name ? `https://i.pravatar.cc/150?u=${user?.uid}` : undefined} alt={userProfile?.name || 'Admin'} />
                     <AvatarFallback>{userProfile?.name?.[0] || 'A'}</AvatarFallback>
                 </Avatar>
                 <div className='flex flex-col text-left group-data-[collapsible=icon]:hidden'>
@@ -82,7 +80,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         </div>
                     ) : (
                         <>
-                        <span className='text-sm font-semibold text-sidebar-foreground'>{userProfile?.name}</span>
+                        <span className='text-sm font-semibold text-sidebar-foreground'>{userProfile?.name || 'Admin'}</span>
                         <span className='text-xs text-muted-foreground'>{user?.email}</span>
                         </>
                     )}

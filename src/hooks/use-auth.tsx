@@ -26,30 +26,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      setLoading(false);
+      if (!currentUser) {
+        setLoading(false);
+      }
     });
 
     return () => unsubscribeAuth();
   }, []);
 
   useEffect(() => {
+    let unsubscribeSnapshot: Unsubscribe | undefined;
+
     if (user) {
+      setLoading(true);
       const userDocRef = doc(firestore, 'users', user.uid);
-      const unsubscribeSnapshot = onSnapshot(userDocRef, (doc) => {
+      unsubscribeSnapshot = onSnapshot(userDocRef, (doc) => {
         if (doc.exists()) {
           setUserProfile(doc.data() as UserProfile);
         } else {
+          // This allows admins to exist without a user profile doc
           setUserProfile(null);
         }
+        setLoading(false);
       }, (error) => {
         console.error("Error fetching user profile:", error);
         setUserProfile(null);
+        setLoading(false);
       });
       
-      return () => unsubscribeSnapshot();
     } else {
       setUserProfile(null);
+      setLoading(false);
     }
+    
+    return () => {
+      if (unsubscribeSnapshot) {
+        unsubscribeSnapshot();
+      }
+    };
   }, [user]);
 
   const value = { user, userProfile, loading };

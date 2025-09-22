@@ -10,9 +10,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { AuthLayout } from '@/components/auth-layout';
-import { auth, firestore } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
@@ -35,21 +34,7 @@ export default function AdminLoginPage() {
 
   const handleLogin = async (values: LoginFormValues) => {
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
-      const user = userCredential.user;
-
-      const userDoc = await getDoc(doc(firestore, 'users', user.uid));
-      if (!userDoc.exists()) {
-        await auth.signOut();
-        throw new Error('User data not found.');
-      }
-
-      const userData = userDoc.data();
-      if (userData.role !== 'admin') {
-        await auth.signOut();
-        throw new Error('You are not authorized to access the admin portal.');
-      }
-
+      await signInWithEmailAndPassword(auth, values.email, values.password);
       toast({ title: 'Success', description: 'Logged in successfully.' });
       router.push('/admin/dashboard');
     } catch (error: any) {
@@ -57,7 +42,7 @@ export default function AdminLoginPage() {
       toast({
         variant: 'destructive',
         title: 'Login Failed',
-        description: error.message || 'Invalid credentials or not an admin.',
+        description: error.message || 'Invalid credentials.',
       });
     }
   };
