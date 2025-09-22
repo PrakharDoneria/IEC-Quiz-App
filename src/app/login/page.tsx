@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -29,6 +29,7 @@ function LoginContent() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const defaultTab = searchParams.get('type') === 'admin' ? 'admin' : 'student';
+  const [activeTab, setActiveTab] = useState(defaultTab);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -39,7 +40,6 @@ function LoginContent() {
   });
 
   const handleLogin = async (values: LoginFormValues) => {
-    const isTryingAdmin = defaultTab === 'admin' || values.email.endsWith('@ieccollege.com');
     try {
         const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
         const user = userCredential.user;
@@ -51,7 +51,7 @@ function LoginContent() {
         
         const userData = userDoc.data();
 
-        if (isTryingAdmin && userData.role !== 'admin') {
+        if (activeTab === 'admin' && userData.role !== 'admin') {
             throw new Error("You are not authorized to access the admin portal.");
         }
 
@@ -75,7 +75,7 @@ function LoginContent() {
 
   return (
     <AuthLayout>
-      <Tabs defaultValue={defaultTab} className="w-full max-w-md">
+      <Tabs defaultValue={defaultTab} className="w-full max-w-md" onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="student">Student</TabsTrigger>
           <TabsTrigger value="admin">Admin</TabsTrigger>
