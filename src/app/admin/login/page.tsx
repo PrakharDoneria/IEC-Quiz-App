@@ -40,6 +40,7 @@ export default function AdminLoginPage() {
 
       const userDoc = await getDoc(doc(firestore, 'users', user.uid));
       if (!userDoc.exists()) {
+        await auth.signOut();
         throw new Error('User data not found.');
       }
 
