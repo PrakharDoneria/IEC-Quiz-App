@@ -24,41 +24,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let unsubscribeSnapshot: Unsubscribe | null = null;
-
-    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      if (user) {
-        setLoading(true);
-        const userDocRef = doc(firestore, 'users', user.uid);
-        unsubscribeSnapshot = onSnapshot(userDocRef, (doc) => {
-             if (doc.exists()) {
-                setUserProfile(doc.data() as UserProfile);
-             } else {
-                setUserProfile(null);
-             }
-             setLoading(false);
-        }, (error) => {
-            console.error("Error fetching user profile:", error);
-            setUserProfile(null);
-            setLoading(false);
-        });
-      } else {
-        if (unsubscribeSnapshot) {
-            unsubscribeSnapshot();
-        }
-        setUserProfile(null);
-        setLoading(false);
-      }
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
     });
 
-    return () => {
-        unsubscribeAuth();
-        if (unsubscribeSnapshot) {
-            unsubscribeSnapshot();
-        }
-    };
+    return () => unsubscribeAuth();
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      const userDocRef = doc(firestore, 'users', user.uid);
+      const unsubscribeSnapshot = onSnapshot(userDocRef, (doc) => {
+        if (doc.exists()) {
+          setUserProfile(doc.data() as UserProfile);
+        } else {
+          setUserProfile(null);
+        }
+      }, (error) => {
+        console.error("Error fetching user profile:", error);
+        setUserProfile(null);
+      });
+      
+      return () => unsubscribeSnapshot();
+    } else {
+      setUserProfile(null);
+    }
+  }, [user]);
 
   const value = { user, userProfile, loading };
 
