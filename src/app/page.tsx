@@ -38,7 +38,7 @@ export default function Home() {
           </div>
           <div className="flex justify-center">
             <Image 
-              src="https://picsum.photos/seed/quiz/600/400"
+              src="https://picsum.photos/600/400"
               alt="Students taking a quiz"
               width={600}
               height={400}
