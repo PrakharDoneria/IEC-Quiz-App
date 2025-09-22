@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
@@ -27,6 +28,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       if (!currentUser) {
+        // If user logs out, we're not loading anymore
         setLoading(false);
       }
     });
@@ -53,12 +55,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUserProfile(null);
         setLoading(false);
       });
-      
     } else {
+      // User is logged out, clear profile and set loading to false
       setUserProfile(null);
       setLoading(false);
     }
     
+    // Cleanup function to unsubscribe from the snapshot listener
     return () => {
       if (unsubscribeSnapshot) {
         unsubscribeSnapshot();
