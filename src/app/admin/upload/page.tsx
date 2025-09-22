@@ -14,6 +14,7 @@ import { addDoc, collection } from 'firebase/firestore';
 import * as XLSX from 'xlsx';
 import { Question } from '@/lib/data';
 import Link from 'next/link';
+import { useState } from 'react';
 
 const uploadSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters.'),
@@ -25,11 +26,17 @@ type UploadFormValues = z.infer<typeof uploadSchema>;
 
 export default function UploadQuizPage() {
   const { toast } = useToast();
+  const [templateDownloaded, setTemplateDownloaded] = useState(false);
+  
   const form = useForm<UploadFormValues>({
     resolver: zodResolver(uploadSchema),
   });
   
   const fileRef = form.register('file');
+
+  const handleDownload = () => {
+    setTemplateDownloaded(true);
+  }
 
   const parseExcelFile = (file: File): Promise<Question[]> => {
     return new Promise((resolve, reject) => {
@@ -85,6 +92,7 @@ export default function UploadQuizPage() {
             description: `Quiz "${data.title}" with code "${data.code}" has been created.`,
         });
         form.reset({title: '', code: '', file: null});
+        setTemplateDownloaded(false);
     } catch (error) {
         console.error("Error processing file or adding document: ", error);
         toast({
@@ -103,20 +111,10 @@ export default function UploadQuizPage() {
         </div>
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-start">
-            <div>
-                <CardTitle>Quiz Details</CardTitle>
-                <CardDescription>
-                    Provide a title, a unique code, and an Excel file with questions.
-                </CardDescription>
-            </div>
-             <Link href="/quiz_template.xlsx" download passHref>
-                <Button variant="outline">
-                    <Download className="mr-2 h-4 w-4" />
-                    Download Template
-                </Button>
-            </Link>
-          </div>
+            <CardTitle>Quiz Details</CardTitle>
+            <CardDescription>
+                Provide a title, a unique code, and an Excel file with questions.
+            </CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -147,24 +145,38 @@ export default function UploadQuizPage() {
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="file"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Questions File (.xlsx)</FormLabel>
-                     <p className='text-xs text-muted-foreground'>The file should have columns: Question, Option 1, Option 2, Option 3, Option 4, Correct Answer.</p>
-                    <FormControl>
-                        <div className="relative">
-                            <Upload className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"/>
-                            <Input type="file" accept=".xlsx, .xls" className="pl-10" {...fileRef} />
-                        </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+              
+              <FormItem>
+                <FormLabel>Questions File (.xlsx)</FormLabel>
+                <p className='text-xs text-muted-foreground'>The file should have columns: Question, Option 1, Option 2, Option 3, Option 4, Correct Answer.</p>
+                
+                {!templateDownloaded ? (
+                    <Link href="/quiz_template.xlsx" download passHref legacyBehavior>
+                        <a onClick={handleDownload} className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-secondary text-secondary-foreground hover:bg-secondary/80 h-10 px-4 py-2 w-full">
+                            <Download className="mr-2 h-4 w-4" />
+                            Download Template
+                        </a>
+                    </Link>
+                ) : (
+                    <FormField
+                        control={form.control}
+                        name="file"
+                        render={({ field }) => (
+                        <FormItem className='!mt-2'>
+                            <FormControl>
+                                <div className="relative">
+                                    <Upload className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"/>
+                                    <Input type="file" accept=".xlsx, .xls" className="pl-10" {...fileRef} />
+                                </div>
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
                 )}
-              />
-              <Button type="submit" className="bg-accent hover:bg-accent/90 text-accent-foreground" disabled={form.formState.isSubmitting}>
+              </FormItem>
+
+              <Button type="submit" className="bg-accent hover:bg-accent/90 text-accent-foreground" disabled={form.formState.isSubmitting || !templateDownloaded}>
                 {form.formState.isSubmitting ? 'Creating...' : 'Create Quiz'}
                 </Button>
             </form>
