@@ -151,11 +151,9 @@ export default function UploadQuizPage() {
                 <p className='text-xs text-muted-foreground'>The file should have columns: Question, Option 1, Option 2, Option 3, Option 4, Correct Answer.</p>
                 
                 {!templateDownloaded ? (
-                    <Link href="/quiz_template.xlsx" download passHref legacyBehavior>
-                        <a onClick={handleDownload} className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-secondary text-secondary-foreground hover:bg-secondary/80 h-10 px-4 py-2 w-full">
-                            <Download className="mr-2 h-4 w-4" />
-                            Download Template
-                        </a>
+                    <Link href="/quiz_template.xlsx" download onClick={handleDownload} className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-secondary text-secondary-foreground hover:bg-secondary/80 h-10 px-4 py-2 w-full">
+                        <Download className="mr-2 h-4 w-4" />
+                        Download Template
                     </Link>
                 ) : (
                     <FormField
