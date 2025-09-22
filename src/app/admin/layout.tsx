@@ -49,7 +49,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     router.push('/admin/login');
   };
 
-  if (loading || !user || userProfile?.role !== 'admin') {
+  if (loading || !user || !userProfile) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="flex items-center space-x-2">
@@ -62,6 +62,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </div>
     );
   }
+
+  if (userProfile.role !== 'admin') {
+      return null; // Don't render anything while redirecting
+  }
+
 
   return (
     <SidebarProvider>
