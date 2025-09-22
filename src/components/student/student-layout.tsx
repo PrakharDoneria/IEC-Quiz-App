@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect } from 'react';
@@ -6,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { LogOut, User as UserIcon } from "lucide-react";
+import { LogOut, User as UserIcon, BarChart2 } from "lucide-react";
 import { Logo } from "../logo";
 import { useAuth } from "@/hooks/use-auth";
 import { auth } from "@/lib/firebase";
@@ -90,6 +91,10 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
                             <DropdownMenuItem onClick={() => router.push('/student/dashboard')}>
                                 <UserIcon className="mr-2 h-4 w-4" />
                                 <span>Dashboard</span>
+                            </DropdownMenuItem>
+                             <DropdownMenuItem onClick={() => router.push('/student/results')}>
+                                <BarChart2 className="mr-2 h-4 w-4" />
+                                <span>My Results</span>
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={handleLogout}>
