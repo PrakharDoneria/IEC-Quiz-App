@@ -2,20 +2,27 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Quiz, Question } from '@/lib/data';
+import type { Quiz } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
-import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogCancel, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { firestore, auth } from '@/lib/firebase';
+import { addDoc, collection, serverTimestamp, getDoc, doc } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
 
 type Answers = Record<string, string>;
 
 export function QuizClient({ quiz }: { quiz: Quiz }) {
   const router = useRouter();
+  const { toast } = useToast();
+  const { user, userProfile } = useAuth();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Answers>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const currentQuestion = quiz.questions[currentQuestionIndex];
   const progress = ((currentQuestionIndex + 1) / quiz.questions.length) * 100;
@@ -36,16 +43,51 @@ export function QuizClient({ quiz }: { quiz: Quiz }) {
     }
   };
   
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+
+    if (!user || !userProfile) {
+        toast({
+            variant: "destructive",
+            title: "Not Authenticated",
+            description: "You must be logged in to submit a quiz.",
+        });
+        setIsSubmitting(false);
+        router.push('/login');
+        return;
+    }
+
+
     let score = 0;
     quiz.questions.forEach(q => {
       if (answers[q.id] === q.correctAnswer) {
         score++;
       }
     });
-    // In a real app, you would save this to the backend.
-    // For this demo, we'll pass it via query params.
-    router.push(`/student/result/${quiz.code}?score=${score}&total=${quiz.questions.length}`);
+
+    try {
+        const resultData = {
+            quizId: quiz.id,
+            studentId: user.uid,
+            studentName: userProfile.name,
+            schoolName: userProfile.schoolName,
+            score: score,
+            total: quiz.questions.length,
+            createdAt: serverTimestamp(),
+        };
+
+        const docRef = await addDoc(collection(firestore, "results"), resultData);
+
+        router.push(`/student/result/${docRef.id}?score=${score}&total=${quiz.questions.length}`);
+    } catch (error: any) {
+        console.error("Error submitting quiz result: ", error);
+        toast({
+            variant: "destructive",
+            title: "Submission Failed",
+            description: error.message || "Could not save your quiz results. Please try again.",
+        });
+        setIsSubmitting(false);
+    }
   };
 
 
@@ -82,7 +124,9 @@ export function QuizClient({ quiz }: { quiz: Quiz }) {
                 {currentQuestionIndex === quiz.questions.length - 1 ? (
                     <AlertDialog>
                         <AlertDialogTrigger asChild>
-                            <Button className="bg-accent hover:bg-accent/90 text-accent-foreground">Submit Quiz</Button>
+                            <Button className="bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isSubmitting}>
+                                {isSubmitting ? 'Submitting...' : 'Submit Quiz'}
+                            </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                             <AlertDialogHeader>
@@ -90,9 +134,13 @@ export function QuizClient({ quiz }: { quiz: Quiz }) {
                                 <AlertDialogDescription>
                                     You cannot change your answers after submitting. Your result will be calculated based on your current selections.
                                 </AlertDialogDescription>
+
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                                <AlertDialogAction onClick={handleSubmit} className="bg-accent hover:bg-accent/90 text-accent-foreground">Confirm & Submit</AlertDialogAction>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleSubmit} className="bg-accent hover:bg-accent/90 text-accent-foreground">
+                                    Confirm & Submit
+                                </AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
                     </AlertDialog>

@@ -1,21 +1,67 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { MOCK_QUIZZES, MOCK_RESULTS, Result } from '@/lib/data';
+import { Quiz, Result } from '@/lib/data';
+import { firestore } from '@/lib/firebase';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 
 export default function AdminResultsPage() {
-  const [selectedQuizId, setSelectedQuizId] = useState<string | null>(MOCK_QUIZZES[0]?.id || null);
+  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [results, setResults] = useState<Result[]>([]);
+  const [selectedQuizId, setSelectedQuizId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadingQuizzes, setLoadingQuizzes] = useState(true);
+
+  useEffect(() => {
+    const fetchQuizzes = async () => {
+      setLoadingQuizzes(true);
+      try {
+        const querySnapshot = await getDocs(collection(firestore, 'quizzes'));
+        const quizzesData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Quiz));
+        setQuizzes(quizzesData);
+        if (quizzesData.length > 0) {
+            setSelectedQuizId(quizzesData[0].id);
+        }
+      } catch (error) {
+        console.error("Error fetching quizzes:", error);
+      } finally {
+        setLoadingQuizzes(false);
+      }
+    };
+    fetchQuizzes();
+  }, []);
+
+  useEffect(() => {
+    if (!selectedQuizId) {
+        setResults([]);
+        setLoading(false);
+        return;
+    };
+
+    const fetchResults = async () => {
+      setLoading(true);
+      try {
+        const q = query(collection(firestore, 'results'), where('quizId', '==', selectedQuizId));
+        const querySnapshot = await getDocs(q);
+        const resultsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Result));
+        setResults(resultsData);
+      } catch (error) {
+        console.error("Error fetching results:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchResults();
+  }, [selectedQuizId]);
 
   const topStudents = useMemo(() => {
-    if (!selectedQuizId) return [];
-    
-    const resultsForQuiz = MOCK_RESULTS.filter(r => r.quizId === selectedQuizId);
+    if (!results) return [];
     
     const studentsBySchool: Record<string, Result[]> = {};
-    resultsForQuiz.forEach(result => {
+    results.forEach(result => {
       if (!studentsBySchool[result.schoolName]) {
         studentsBySchool[result.schoolName] = [];
       }
@@ -34,7 +80,7 @@ export default function AdminResultsPage() {
         return b.score - a.score;
     });
 
-  }, [selectedQuizId]);
+  }, [results]);
 
   return (
     <div className="space-y-8">
@@ -50,14 +96,18 @@ export default function AdminResultsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="max-w-xs">
-            <Select onValueChange={setSelectedQuizId} defaultValue={selectedQuizId || ''}>
+            <Select onValueChange={setSelectedQuizId} value={selectedQuizId || ''} disabled={loadingQuizzes || quizzes.length === 0}>
               <SelectTrigger>
-                <SelectValue placeholder="Select a quiz..." />
+                <SelectValue placeholder={loadingQuizzes ? "Loading quizzes..." : "Select a quiz..."} />
               </SelectTrigger>
               <SelectContent>
-                {MOCK_QUIZZES.map(quiz => (
-                  <SelectItem key={quiz.id} value={quiz.id}>{quiz.title} ({quiz.code})</SelectItem>
-                ))}
+                {quizzes.length > 0 ? (
+                    quizzes.map(quiz => (
+                    <SelectItem key={quiz.id} value={quiz.id}>{quiz.title} ({quiz.code})</SelectItem>
+                    ))
+                ) : (
+                    <SelectItem value="no-quiz" disabled>No quizzes found</SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -72,8 +122,12 @@ export default function AdminResultsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {topStudents.length > 0 ? (
-                  topStudents.map((result, index) => (
+                {loading ? (
+                    <TableRow>
+                        <TableCell colSpan={3} className="text-center">Loading results...</TableCell>
+                    </TableRow>
+                ) : topStudents.length > 0 ? (
+                  topStudents.map((result) => (
                     <TableRow key={result.id}>
                       <TableCell className="font-medium">{result.schoolName}</TableCell>
                       <TableCell>{result.studentName}</TableCell>

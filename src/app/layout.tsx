@@ -3,6 +3,7 @@ import { PT_Sans } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
+import { AuthProvider } from '@/hooks/use-auth';
 
 const ptSans = PT_Sans({
   subsets: ['latin'],
@@ -33,7 +34,9 @@ export default function RootLayout({
           ptSans.variable
         )}
       >
-        {children}
+        <AuthProvider>
+            {children}
+        </AuthProvider>
         <Toaster />
       </body>
     </html>

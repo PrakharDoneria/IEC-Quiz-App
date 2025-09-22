@@ -11,6 +11,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { AuthLayout } from '@/components/auth-layout';
+import { auth, firestore } from '@/lib/firebase';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 
 const signupSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -37,10 +40,30 @@ export default function SignupPage() {
     },
   });
 
-  const handleSignup = (values: SignupFormValues) => {
-    console.log(values);
-    toast({ title: 'Account Created', description: 'Welcome to QuizVerse!' });
-    router.push('/student/dashboard');
+  const handleSignup = async (values: SignupFormValues) => {
+    try {
+        const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+        const user = userCredential.user;
+
+        await setDoc(doc(firestore, 'users', user.uid), {
+            uid: user.uid,
+            name: values.name,
+            schoolName: values.schoolName,
+            email: values.email,
+            mobile: values.mobile,
+            role: 'student',
+        });
+
+        toast({ title: 'Account Created', description: 'Welcome to QuizVerse!' });
+        router.push('/student/dashboard');
+    } catch (error: any) {
+        console.error('Signup Error:', error);
+        toast({
+            variant: 'destructive',
+            title: 'Signup Failed',
+            description: error.message || 'An unexpected error occurred.',
+        });
+    }
   };
 
   return (
@@ -120,7 +143,9 @@ export default function SignupPage() {
               />
             </CardContent>
             <CardFooter className="flex flex-col gap-4">
-              <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">Sign Up</Button>
+              <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting ? 'Signing Up...' : 'Sign Up'}
+                </Button>
               <p className="text-sm text-center text-muted-foreground">
                 Already have an account?{' '}
                 <Link href="/login" className="font-medium text-primary hover:underline">

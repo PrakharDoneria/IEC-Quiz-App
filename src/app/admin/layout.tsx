@@ -17,6 +17,10 @@ import { Button } from '@/components/ui/button';
 import { Home, Upload, BarChart2, FileOutput, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/use-auth';
+import { auth } from '@/lib/firebase';
+import { signOut } from 'firebase/auth';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const navItems = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: Home },
@@ -28,6 +32,12 @@ const navItems = [
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { user, userProfile, loading } = useAuth();
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    router.push('/');
+  };
 
   return (
     <SidebarProvider>
@@ -41,7 +51,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <SidebarMenuItem key={item.href}>
                 <Link href={item.href}>
                   <SidebarMenuButton
-                    isActive={pathname === item.href}
+                    isActive={pathname.startsWith(item.href)}
                     tooltip={{ children: item.label }}
                   >
                     <item.icon />
@@ -55,15 +65,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <SidebarFooter className='items-center'>
            <div className='flex items-center gap-2 w-full p-2 rounded-md hover:bg-sidebar-accent transition-colors'>
                 <Avatar className="h-8 w-8">
-                    <AvatarImage src="https://i.pravatar.cc/150?u=admin" alt="Admin" />
-                    <AvatarFallback>A</AvatarFallback>
+                    <AvatarImage src={`https://i.pravatar.cc/150?u=${user?.uid}`} alt={userProfile?.name} />
+                    <AvatarFallback>{userProfile?.name?.[0] || 'A'}</AvatarFallback>
                 </Avatar>
                 <div className='flex flex-col text-left group-data-[collapsible=icon]:hidden'>
-                    <span className='text-sm font-semibold text-sidebar-foreground'>Admin User</span>
-                    <span className='text-xs text-muted-foreground'>admin@ieccollege.com</span>
+                    {loading ? (
+                        <div className="space-y-1">
+                            <Skeleton className="h-4 w-20" />
+                            <Skeleton className="h-3 w-24" />
+                        </div>
+                    ) : (
+                        <>
+                        <span className='text-sm font-semibold text-sidebar-foreground'>{userProfile?.name}</span>
+                        <span className='text-xs text-muted-foreground'>{user?.email}</span>
+                        </>
+                    )}
                 </div>
             </div>
-          <Button variant="ghost" className="w-full justify-start gap-2" onClick={() => router.push('/')}>
+          <Button variant="ghost" className="w-full justify-start gap-2" onClick={handleLogout}>
             <LogOut />
             <span className="group-data-[collapsible=icon]:hidden">Logout</span>
           </Button>

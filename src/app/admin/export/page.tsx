@@ -1,6 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileOutput } from 'lucide-react';
-import { ExportClient } from '@/components/admin/export-client';
+import { FileOutput, Frown } from 'lucide-react';
 
 export default function ExportPage() {
   return (
@@ -14,18 +13,18 @@ export default function ExportPage() {
 
       <Card>
         <CardHeader className="flex-row items-start gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-            <FileOutput className="h-6 w-6 text-primary" />
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-destructive/10">
+            <Frown className="h-6 w-6 text-destructive" />
           </div>
           <div>
-            <CardTitle>AI-Powered Data Export</CardTitle>
+            <CardTitle>Feature Not Available</CardTitle>
             <CardDescription>
-              Use AI to generate custom exports of student data.
+              The AI-Powered Data Export feature has been removed.
             </CardDescription>
           </div>
         </CardHeader>
         <CardContent>
-          <ExportClient />
+          <p className='text-sm text-muted-foreground'>This feature was powered by a service that is no longer available. Please check back later for updates.</p>
         </CardContent>
       </Card>
     </div>

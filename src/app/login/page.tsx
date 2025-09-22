@@ -13,6 +13,9 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { AuthLayout } from '@/components/auth-layout';
+import { auth, firestore } from '@/lib/firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
@@ -35,20 +38,38 @@ function LoginContent() {
     },
   });
 
-  const handleLogin = (values: LoginFormValues, role: 'student' | 'admin') => {
-    if (role === 'admin') {
-      if (!values.email.endsWith('@ieccollege.com')) {
-        form.setError('email', {
-          type: 'manual',
-          message: 'Admin email must end with @ieccollege.com',
+  const handleLogin = async (values: LoginFormValues) => {
+    const isTryingAdmin = defaultTab === 'admin' || values.email.endsWith('@ieccollege.com');
+    try {
+        const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
+        const user = userCredential.user;
+
+        const userDoc = await getDoc(doc(firestore, 'users', user.uid));
+        if (!userDoc.exists()) {
+            throw new Error("User data not found.");
+        }
+        
+        const userData = userDoc.data();
+
+        if (isTryingAdmin && userData.role !== 'admin') {
+            throw new Error("You are not authorized to access the admin portal.");
+        }
+
+        toast({ title: 'Success', description: 'Logged in successfully.' });
+        
+        if (userData.role === 'admin') {
+            router.push('/admin/dashboard');
+        } else {
+            router.push('/student/dashboard');
+        }
+
+    } catch (error: any) {
+        console.error("Login error:", error);
+        toast({
+            variant: 'destructive',
+            title: 'Login Failed',
+            description: error.message || 'Invalid credentials. Please try again.',
         });
-        return;
-      }
-      toast({ title: 'Success', description: 'Admin logged in successfully.' });
-      router.push('/admin/dashboard');
-    } else {
-      toast({ title: 'Success', description: 'Student logged in successfully.' });
-      router.push('/student/dashboard');
     }
   };
 
@@ -66,7 +87,7 @@ function LoginContent() {
               <CardDescription>Enter your credentials to access your dashboard.</CardDescription>
             </CardHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit((values) => handleLogin(values, 'student'))}>
+              <form onSubmit={form.handleSubmit(handleLogin)}>
                 <CardContent className="space-y-4">
                   <FormField
                     control={form.control}
@@ -96,7 +117,9 @@ function LoginContent() {
                   />
                 </CardContent>
                 <CardFooter className="flex flex-col gap-4">
-                  <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">Login</Button>
+                  <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" disabled={form.formState.isSubmitting}>
+                    {form.formState.isSubmitting ? 'Logging in...' : 'Login'}
+                    </Button>
                   <p className="text-sm text-center text-muted-foreground">
                     Don&apos;t have an account?{' '}
                     <Link href="/signup" className="font-medium text-primary hover:underline">
@@ -115,7 +138,7 @@ function LoginContent() {
               <CardDescription>For authorized personnel only.</CardDescription>
             </CardHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit((values) => handleLogin(values, 'admin'))}>
+              <form onSubmit={form.handleSubmit(handleLogin)}>
                 <CardContent className="space-y-4">
                   <FormField
                     control={form.control}
@@ -145,7 +168,9 @@ function LoginContent() {
                   />
                 </CardContent>
                 <CardFooter>
-                  <Button type="submit" className="w-full">Login</Button>
+                  <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+                  {form.formState.isSubmitting ? 'Logging in...' : 'Login'}
+                  </Button>
                 </CardFooter>
               </form>
             </Form>

@@ -9,6 +9,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Upload } from 'lucide-react';
+import { firestore } from '@/lib/firebase';
+import { addDoc, collection } from 'firebase/firestore';
+import * as XLSX from 'xlsx';
+import { Question } from '@/lib/data';
 
 const uploadSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters.'),
@@ -26,19 +30,68 @@ export default function UploadQuizPage() {
   
   const fileRef = form.register('file');
 
-  function onSubmit(data: UploadFormValues) {
-    console.log(data);
-    toast({
-      title: 'Quiz Created!',
-      description: `Quiz "${data.title}" with code "${data.code}" has been created.`,
+  const parseExcelFile = (file: File): Promise<Question[]> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const bstr = event.target?.result;
+                const wb = XLSX.read(bstr, { type: 'binary' });
+                const wsname = wb.SheetNames[0];
+                const ws = wb.Sheets[wsname];
+                const data = XLSX.utils.sheet_to_json(ws, { header: 1 }) as string[][];
+
+                // Remove header row
+                const rows = data.slice(1);
+                
+                const questions: Question[] = rows.map((row, index) => {
+                    const [question, ...optionsAndAnswer] = row;
+                    const options = optionsAndAnswer.slice(0, 4);
+                    const correctAnswer = optionsAndAnswer[4];
+                    if (!question || options.length < 4 || !correctAnswer) {
+                        throw new Error(`Invalid data in row ${index + 2}`);
+                    }
+                    return {
+                        id: `q${index + 1}`,
+                        question,
+                        options,
+                        correctAnswer,
+                    };
+                });
+                resolve(questions);
+            } catch (e) {
+                reject(e);
+            }
+        };
+        reader.onerror = (error) => reject(error);
+        reader.readAsBinaryString(file);
     });
-    // In a real app, you'd use a library like 'xlsx' or 'papaparse' to process the file.
-    toast({
-      variant: 'default',
-      title: 'File Processing Mocked',
-      description: 'File upload is for demonstration only. No data was processed.',
-    });
-    form.reset({title: '', code: '', file: null});
+  }
+
+  async function onSubmit(data: UploadFormValues) {
+    const file = data.file[0];
+    try {
+        const questions = await parseExcelFile(file);
+        
+        await addDoc(collection(firestore, 'quizzes'), {
+            title: data.title,
+            code: data.code.toUpperCase(),
+            questions: questions,
+        });
+
+        toast({
+            title: 'Quiz Created!',
+            description: `Quiz "${data.title}" with code "${data.code}" has been created.`,
+        });
+        form.reset({title: '', code: '', file: null});
+    } catch (error) {
+        console.error("Error processing file or adding document: ", error);
+        toast({
+            variant: 'destructive',
+            title: 'Upload Failed',
+            description: 'Could not create the quiz. Please check the file format and try again.',
+        });
+    }
   }
 
   return (
@@ -51,7 +104,7 @@ export default function UploadQuizPage() {
         <CardHeader>
           <CardTitle>Quiz Details</CardTitle>
           <CardDescription>
-            Provide a title, a unique code, and an Excel file with questions. The file should have columns: Que, Option 1, Option 2, Option 3, Option 4, Correct Answer.
+            Provide a title, a unique code, and an Excel file with questions. The file should have columns: Question, Option 1, Option 2, Option 3, Option 4, Correct Answer.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -99,7 +152,9 @@ export default function UploadQuizPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="bg-accent hover:bg-accent/90 text-accent-foreground">Create Quiz</Button>
+              <Button type="submit" className="bg-accent hover:bg-accent/90 text-accent-foreground" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting ? 'Creating...' : 'Create Quiz'}
+                </Button>
             </form>
           </Form>
         </CardContent>
