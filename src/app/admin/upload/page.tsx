@@ -13,7 +13,6 @@ import { firestore } from '@/lib/firebase';
 import { addDoc, collection } from 'firebase/firestore';
 import * as XLSX from 'xlsx';
 import { Question } from '@/lib/data';
-import Link from 'next/link';
 import { useState } from 'react';
 
 const uploadSchema = z.object({
@@ -35,6 +34,14 @@ export default function UploadQuizPage() {
   const fileRef = form.register('file');
 
   const handleDownload = () => {
+    const sampleData = [
+        ['Question', 'Option 1', 'Option 2', 'Option 3', 'Option 4', 'Correct Answer'],
+        ['What is the capital of France?', 'Berlin', 'Madrid', 'Paris', 'Rome', 'Paris']
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(sampleData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Quiz Template");
+    XLSX.writeFile(wb, "quiz_template.xlsx");
     setTemplateDownloaded(true);
   }
 
@@ -151,10 +158,10 @@ export default function UploadQuizPage() {
                 <p className='text-xs text-muted-foreground'>The file should have columns: Question, Option 1, Option 2, Option 3, Option 4, Correct Answer.</p>
                 
                 {!templateDownloaded ? (
-                    <Link href="/quiz_template.xlsx" download onClick={handleDownload} className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-secondary text-secondary-foreground hover:bg-secondary/80 h-10 px-4 py-2 w-full">
+                    <Button onClick={handleDownload} type="button" variant="secondary" className="w-full">
                         <Download className="mr-2 h-4 w-4" />
                         Download Template
-                    </Link>
+                    </Button>
                 ) : (
                     <FormField
                         control={form.control}
