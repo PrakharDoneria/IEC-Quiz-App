@@ -18,9 +18,14 @@ const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
 
 // Initialize Firestore with offline persistence
-const firestore = initializeFirestore(app, {
-  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
-});
+let firestore: any;
+try {
+    firestore = getFirestore(app);
+} catch (e) {
+    firestore = initializeFirestore(app, {
+        localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+    });
+}
 
 
 export { app, auth, firestore };
