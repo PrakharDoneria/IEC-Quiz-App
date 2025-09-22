@@ -21,6 +21,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { auth } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useEffect } from 'react';
 
 const navItems = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: Home },
@@ -34,10 +35,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const { user, userProfile, loading } = useAuth();
 
+  useEffect(() => {
+    if (!loading && (!user || userProfile?.role !== 'admin')) {
+      router.replace('/admin/login');
+    }
+  }, [user, userProfile, loading, router]);
+
+
   const handleLogout = async () => {
     await signOut(auth);
-    router.push('/');
+    router.push('/admin/login');
   };
+
+  if (loading || !user || userProfile?.role !== 'admin') {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p>Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <SidebarProvider>

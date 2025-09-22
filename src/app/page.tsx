@@ -24,7 +24,7 @@ export default function Home() {
                 Student Portal <ArrowRight />
               </Button>
             </Link>
-            <Link href="/login?type=admin" passHref>
+            <Link href="/admin/login" passHref>
               <Button variant="outline" className="w-full justify-between">
                 Admin Portal <ArrowRight />
               </Button>

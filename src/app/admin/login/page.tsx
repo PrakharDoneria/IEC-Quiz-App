@@ -1,19 +1,18 @@
 'use client';
 
-import { Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { AuthLayout } from '@/components/auth-layout';
-import { auth } from '@/lib/firebase';
+import { auth, firestore } from '@/lib/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
@@ -22,7 +21,7 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
-function LoginContent() {
+export default function AdminLoginPage() {
   const router = useRouter();
   const { toast } = useToast();
 
@@ -36,79 +35,77 @@ function LoginContent() {
 
   const handleLogin = async (values: LoginFormValues) => {
     try {
-        await signInWithEmailAndPassword(auth, values.email, values.password);
-        toast({ title: 'Success', description: 'Logged in successfully.' });
-        router.push('/student/dashboard');
+      const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
+      const user = userCredential.user;
+
+      const userDoc = await getDoc(doc(firestore, 'users', user.uid));
+      if (!userDoc.exists()) {
+        throw new Error('User data not found.');
+      }
+
+      const userData = userDoc.data();
+      if (userData.role !== 'admin') {
+        await auth.signOut();
+        throw new Error('You are not authorized to access the admin portal.');
+      }
+
+      toast({ title: 'Success', description: 'Logged in successfully.' });
+      router.push('/admin/dashboard');
     } catch (error: any) {
-        console.error("Login error:", error);
-        toast({
-            variant: 'destructive',
-            title: 'Login Failed',
-            description: error.message || 'Invalid credentials. Please try again.',
-        });
+      console.error('Admin login error:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Login Failed',
+        description: error.message || 'Invalid credentials or not an admin.',
+      });
     }
   };
 
   return (
     <AuthLayout>
-      <Card  className="w-full max-w-md">
+      <Card className="w-full max-w-md">
         <CardHeader>
-            <CardTitle>Student Login</CardTitle>
-            <CardDescription>Enter your credentials to access your dashboard.</CardDescription>
+          <CardTitle>Admin Login</CardTitle>
+          <CardDescription>For authorized personnel only.</CardDescription>
         </CardHeader>
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleLogin)}>
+          <form onSubmit={form.handleSubmit(handleLogin)}>
             <CardContent className="space-y-4">
-                <FormField
+              <FormField
                 control={form.control}
                 name="email"
                 render={({ field }) => (
-                    <FormItem>
+                  <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                        <Input placeholder="student@example.com" {...field} />
+                      <Input placeholder="admin@example.com" {...field} />
                     </FormControl>
                     <FormMessage />
-                    </FormItem>
+                  </FormItem>
                 )}
-                />
-                <FormField
+              />
+              <FormField
                 control={form.control}
                 name="password"
                 render={({ field }) => (
-                    <FormItem>
+                  <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} />
+                      <Input type="password" placeholder="••••••••" {...field} />
                     </FormControl>
                     <FormMessage />
-                    </FormItem>
+                  </FormItem>
                 )}
-                />
+              />
             </CardContent>
-            <CardFooter className="flex flex-col gap-4">
-                <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" disabled={form.formState.isSubmitting}>
+            <CardFooter>
+              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
                 {form.formState.isSubmitting ? 'Logging in...' : 'Login'}
-                </Button>
-                <p className="text-sm text-center text-muted-foreground">
-                Don&apos;t have an account?{' '}
-                <Link href="/signup" className="font-medium text-primary hover:underline">
-                    Sign up
-                </Link>
-                </p>
+              </Button>
             </CardFooter>
-            </form>
+          </form>
         </Form>
       </Card>
     </AuthLayout>
-  );
-}
-
-
-export default function LoginPage() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <LoginContent />
-    </Suspense>
   );
 }
