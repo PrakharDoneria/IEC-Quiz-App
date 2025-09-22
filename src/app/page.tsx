@@ -13,8 +13,8 @@ export default function Home() {
            <Link href="/login" passHref>
             <Button variant="ghost">Student Login</Button>
           </Link>
-          <Link href="/admin/login" passHref>
-            <Button>Admin Portal</Button>
+          <Link href="/signup" passHref>
+            <Button>Sign Up</Button>
           </Link>
         </div>
       </header>
@@ -34,11 +34,6 @@ export default function Home() {
                   Student Portal <ArrowRight />
                 </Button>
               </Link>
-              <Link href="/signup" passHref>
-                <Button size="lg" variant="outline" className="w-full sm:w-auto">
-                  Sign Up Now
-                </Button>
-              </Link>
             </div>
           </div>
           <div className="flex justify-center">
@@ -54,10 +49,13 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className="container mx-auto flex items-center justify-center border-t py-4">
+      <footer className="container mx-auto flex items-center justify-between border-t py-4">
         <p className="text-sm text-muted-foreground">
           &copy; {new Date().getFullYear()} IEC Group of Institutions. All rights reserved.
         </p>
+         <Link href="/admin/login" className="text-sm text-muted-foreground hover:text-primary">
+            Admin
+        </Link>
       </footer>
     </div>
   );
