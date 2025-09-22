@@ -8,11 +8,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Upload } from 'lucide-react';
+import { Download, Upload } from 'lucide-react';
 import { firestore } from '@/lib/firebase';
 import { addDoc, collection } from 'firebase/firestore';
 import * as XLSX from 'xlsx';
 import { Question } from '@/lib/data';
+import Link from 'next/link';
 
 const uploadSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters.'),
@@ -102,10 +103,20 @@ export default function UploadQuizPage() {
         </div>
       <Card>
         <CardHeader>
-          <CardTitle>Quiz Details</CardTitle>
-          <CardDescription>
-            Provide a title, a unique code, and an Excel file with questions. The file should have columns: Question, Option 1, Option 2, Option 3, Option 4, Correct Answer.
-          </CardDescription>
+          <div className="flex justify-between items-start">
+            <div>
+                <CardTitle>Quiz Details</CardTitle>
+                <CardDescription>
+                    Provide a title, a unique code, and an Excel file with questions.
+                </CardDescription>
+            </div>
+             <Link href="/quiz_template.xlsx" download passHref>
+                <Button variant="outline">
+                    <Download className="mr-2 h-4 w-4" />
+                    Download Template
+                </Button>
+            </Link>
+          </div>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -142,6 +153,7 @@ export default function UploadQuizPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Questions File (.xlsx)</FormLabel>
+                     <p className='text-xs text-muted-foreground'>The file should have columns: Question, Option 1, Option 2, Option 3, Option 4, Correct Answer.</p>
                     <FormControl>
                         <div className="relative">
                             <Upload className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"/>
