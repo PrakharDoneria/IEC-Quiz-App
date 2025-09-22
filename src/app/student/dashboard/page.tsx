@@ -66,8 +66,8 @@ export default function StudentDashboard() {
           console.error("Error fetching past results:", error);
           toast({
             variant: 'destructive',
-            title: 'Error',
-            description: 'Could not fetch your past quiz results.',
+            title: 'Error Fetching Results',
+            description: 'Could not fetch your past quiz results. Please ensure the necessary Firestore indexes are created.',
           });
         } finally {
           setLoadingResults(false);
