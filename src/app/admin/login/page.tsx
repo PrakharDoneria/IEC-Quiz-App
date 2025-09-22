@@ -52,7 +52,12 @@ export default function AdminLoginPage() {
       const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
       if (!userCredential.user.emailVerified) {
         await auth.signOut();
-        throw new Error("Please verify your email before logging in.");
+        toast({
+            variant: 'destructive',
+            title: 'Email Not Verified',
+            description: "Please verify your email before logging in."
+        });
+        return;
       }
       toast({ title: 'Success', description: 'Logged in successfully.' });
       router.push('/admin/dashboard');

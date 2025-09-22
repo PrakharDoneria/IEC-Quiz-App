@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
@@ -55,13 +56,23 @@ function LoginContent() {
 
       if (!user.emailVerified) {
           await auth.signOut();
-          throw new Error("Please verify your email before logging in. Check your inbox for a verification link.");
+          toast({
+            variant: 'destructive',
+            title: 'Email Not Verified',
+            description: "Please verify your email before logging in. Check your inbox for a verification link."
+          });
+          return;
       }
 
       const userDoc = await getDoc(doc(firestore, 'users', user.uid));
        if (userDoc.exists() && userDoc.data().role === 'admin') {
           await auth.signOut();
-          throw new Error("Admin accounts should log in through the admin portal.");
+          toast({
+            variant: 'destructive',
+            title: 'Login Failed',
+            description: "Admin accounts should log in through the admin portal.",
+          });
+          return;
       }
 
 
