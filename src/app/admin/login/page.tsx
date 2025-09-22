@@ -40,14 +40,20 @@ export default function AdminLoginPage() {
   
   useEffect(() => {
     if (!loading && user) {
-        router.replace('/admin/dashboard');
+        if(user.emailVerified) {
+          router.replace('/admin/dashboard');
+        }
     }
   }, [user, loading, router]);
 
 
   const handleLogin = async (values: LoginFormValues) => {
     try {
-      await signInWithEmailAndPassword(auth, values.email, values.password);
+      const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
+      if (!userCredential.user.emailVerified) {
+        await auth.signOut();
+        throw new Error("Please verify your email before logging in.");
+      }
       toast({ title: 'Success', description: 'Logged in successfully.' });
       router.push('/admin/dashboard');
     } catch (error: any) {
@@ -60,7 +66,7 @@ export default function AdminLoginPage() {
     }
   };
   
-  if(loading || user) {
+  if(loading || (user && user.emailVerified)) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="flex items-center space-x-2">

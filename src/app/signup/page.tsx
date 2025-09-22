@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { AuthLayout } from '@/components/auth-layout';
 import { auth, firestore } from '@/lib/firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
@@ -48,6 +48,8 @@ export default function SignupPage() {
         const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
         const user = userCredential.user;
 
+        await sendEmailVerification(user);
+
         await setDoc(doc(firestore, 'users', user.uid), {
             uid: user.uid,
             name: values.name,
@@ -57,8 +59,9 @@ export default function SignupPage() {
             role: 'student',
         });
 
-        toast({ title: 'Account Created', description: 'Welcome to IEC Quiz!' });
-        router.push('/student/dashboard');
+        toast({ title: 'Account Created', description: 'Verification email sent! Please check your inbox.' });
+        await auth.signOut();
+        router.push('/login');
     } catch (error: any) {
         console.error('Signup Error:', error);
         toast({

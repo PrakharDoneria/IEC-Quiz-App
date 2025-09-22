@@ -41,7 +41,9 @@ function LoginContent() {
   
   useEffect(() => {
     if (!loading && user) {
-        router.replace('/student/dashboard');
+        if(user.emailVerified) {
+            router.replace('/student/dashboard');
+        }
     }
   }, [user, loading, router]);
 
@@ -50,6 +52,11 @@ function LoginContent() {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
+
+      if (!user.emailVerified) {
+          await auth.signOut();
+          throw new Error("Please verify your email before logging in. Check your inbox for a verification link.");
+      }
 
       const userDoc = await getDoc(doc(firestore, 'users', user.uid));
        if (userDoc.exists() && userDoc.data().role === 'admin') {
