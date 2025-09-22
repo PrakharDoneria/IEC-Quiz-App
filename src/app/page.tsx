@@ -6,7 +6,9 @@ import { Logo } from '@/components/logo';
 import Image from 'next/image';
 
 export default function Home() {
-  const randomImageSeed = Date.now();
+  const imageKeywords = ['quiz', 'study', 'school', 'engineering', 'tech'];
+  const randomKeyword = imageKeywords[Math.floor(Math.random() * imageKeywords.length)];
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <header className="container mx-auto flex h-20 items-center justify-between px-4">
@@ -40,12 +42,13 @@ export default function Home() {
           </div>
           <div className="flex justify-center">
             <Image 
-              src={`https://picsum.photos/seed/${randomImageSeed}/600/400`}
+              src={`https://picsum.photos/seed/${randomKeyword}/600/400`}
               alt="Students taking a quiz"
               width={600}
               height={400}
               className="rounded-lg shadow-xl"
-              data-ai-hint="education learning"
+              data-ai-hint={randomKeyword}
+              key={randomKeyword}
             />
           </div>
         </section>
