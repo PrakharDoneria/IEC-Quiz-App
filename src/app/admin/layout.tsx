@@ -122,7 +122,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         <span className="sr-only">Toggle Menu</span>
                     </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="sm:max-w-xs bg-sidebar text-sidebar-foreground border-sidebar-border">
+                <SheetContent side="left" className="sm:max-w-xs bg-sidebar text-sidebar-foreground border-sidebar-border flex flex-col p-0">
                      <SidebarHeader className='!p-0 !px-2.5'>
                         <SheetHeader>
                           <SheetTitle><Logo /></SheetTitle>
@@ -134,6 +134,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             <NavContent onLinkClick={() => setMobileSheetOpen(false)} />
                         </SidebarMenu>
                     </SidebarContent>
+                    <SidebarFooter className='!p-0 !px-2.5 mt-auto'>
+                         <Button variant="ghost" className="w-full justify-start gap-2" onClick={() => {
+                            setMobileSheetOpen(false);
+                            handleLogout();
+                         }}>
+                            <LogOut />
+                            <span>Logout</span>
+                        </Button>
+                    </SidebarFooter>
                 </SheetContent>
             </Sheet>
              <h1 className="font-semibold text-lg">IEC Quiz Admin</h1>
