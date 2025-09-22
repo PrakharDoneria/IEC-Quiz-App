@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -11,8 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Download, Upload } from 'lucide-react';
 import { firestore } from '@/lib/firebase';
 import { addDoc, collection } from 'firebase/firestore';
-import * as XLSX from 'xlsx';
-import { Question } from '@/lib/data';
+import type { Question } from '@/lib/data';
 import { useState } from 'react';
 
 const uploadSchema = z.object({
@@ -38,7 +38,8 @@ export default function UploadQuizPage() {
   
   const fileRef = form.register('file');
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
+    const XLSX = await import('xlsx');
     const sampleData = [
         ['Question', 'Option 1', 'Option 2', 'Option 3', 'Option 4', 'Correct Answer'],
         ['What is the capital of France?', 'Berlin', 'Madrid', 'Paris', 'Rome', 'Paris']
@@ -51,7 +52,8 @@ export default function UploadQuizPage() {
   }
 
   const parseExcelFile = (file: File): Promise<Question[]> => {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
+        const XLSX = await import('xlsx');
         const reader = new FileReader();
         reader.onload = (event) => {
             try {
