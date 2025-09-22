@@ -3,6 +3,9 @@
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
 import {
@@ -121,7 +124,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 </SheetTrigger>
                 <SheetContent side="left" className="sm:max-w-xs bg-sidebar text-sidebar-foreground border-sidebar-border">
                      <SidebarHeader className='!p-0 !px-2.5'>
-                        <Logo />
+                        <SheetHeader>
+                          <SheetTitle><Logo /></SheetTitle>
+                          <SheetDescription className='sr-only'>Admin Menu</SheetDescription>
+                        </SheetHeader>
                     </SidebarHeader>
                      <SidebarContent className='!p-0 !px-2.5 mt-4'>
                         <SidebarMenu>
