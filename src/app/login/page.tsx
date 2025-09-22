@@ -12,8 +12,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { AuthLayout } from '@/components/auth-layout';
-import { auth } from '@/lib/firebase';
+import { auth, firestore } from '@/lib/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
@@ -36,9 +37,18 @@ function LoginContent() {
 
   const handleLogin = async (values: LoginFormValues) => {
     try {
-        await signInWithEmailAndPassword(auth, values.email, values.password);
-        toast({ title: 'Success', description: 'Logged in successfully.' });
-        router.push('/student/dashboard');
+      const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
+      const user = userCredential.user;
+
+      const userDoc = await getDoc(doc(firestore, 'users', user.uid));
+       if (userDoc.exists() && userDoc.data().role === 'admin') {
+          await auth.signOut();
+          throw new Error("Admin accounts should log in through the admin portal.");
+      }
+
+
+      toast({ title: 'Success', description: 'Logged in successfully.' });
+      router.push('/student/dashboard');
     } catch (error: any) {
         console.error("Login error:", error);
         toast({
