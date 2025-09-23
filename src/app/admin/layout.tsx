@@ -29,7 +29,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { auth } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 const navItems = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: Home },
@@ -65,6 +65,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const { user, userProfile, loading } = useAuth();
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
+
+  useEffect(() => {
+    if (!loading && user && !user.email?.endsWith('@ieccollege.com')) {
+      signOut(auth);
+      router.replace('/admin/login');
+    }
+  }, [user, loading, router]);
 
 
   const handleLogout = async () => {

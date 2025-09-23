@@ -40,7 +40,7 @@ export default function AdminLoginPage() {
   
   useEffect(() => {
     if (!loading && user) {
-        if(user.emailVerified) {
+        if(user.emailVerified && user.email?.endsWith('@ieccollege.com')) {
           router.replace('/admin/dashboard');
         }
     }
@@ -50,6 +50,17 @@ export default function AdminLoginPage() {
   const handleLogin = async (values: LoginFormValues) => {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
+      
+      if (!userCredential.user.email?.endsWith('@ieccollege.com')) {
+        await auth.signOut();
+        toast({
+            variant: 'destructive',
+            title: 'Access Denied',
+            description: "Only users with an @ieccollege.com email can access the admin portal."
+        });
+        return;
+      }
+      
       if (!userCredential.user.emailVerified) {
         await sendEmailVerification(userCredential.user);
         await auth.signOut();
@@ -72,7 +83,7 @@ export default function AdminLoginPage() {
     }
   };
   
-  if(loading || (user && user.emailVerified)) {
+  if(loading || (user && user.emailVerified && user.email?.endsWith('@ieccollege.com'))) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="flex items-center space-x-2">
