@@ -13,6 +13,11 @@ import { firestore, auth } from '@/lib/firebase';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
+import { PanelLeft } from 'lucide-react';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer';
+import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
+
 
 type Answers = Record<string, string>;
 
@@ -21,11 +26,50 @@ interface QuizClientProps {
     questionNumber: number;
 }
 
+function QuestionPalette({
+    totalQuestions,
+    answers,
+    currentQuestionIndex,
+    onQuestionSelect,
+}: {
+    totalQuestions: number;
+    answers: Answers;
+    currentQuestionIndex: number;
+    onQuestionSelect: (qNumber: number) => void;
+}) {
+    return (
+        <div className="grid grid-cols-5 gap-2">
+            {Array.from({ length: totalQuestions }).map((_, i) => {
+                const questionId = `q${i + 1}`;
+                const isAttempted = answers.hasOwnProperty(questionId);
+                const isCurrent = i === currentQuestionIndex;
+
+                return (
+                    <Button
+                        key={i}
+                        variant={isAttempted ? 'default' : 'outline'}
+                        className={cn(
+                            "h-10 w-10 p-0",
+                            isCurrent && "ring-2 ring-primary ring-offset-2",
+                             isAttempted ? 'bg-green-600 hover:bg-green-700 text-white': ''
+                        )}
+                        onClick={() => onQuestionSelect(i + 1)}
+                    >
+                        {i + 1}
+                    </Button>
+                );
+            })}
+        </div>
+    );
+}
+
+
 export function QuizClient({ quiz, questionNumber }: QuizClientProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
   const { user, userProfile } = useAuth();
+  const isMobile = useIsMobile();
   
   const [answers, setAnswers] = useState<Answers>(() => {
     if (typeof window !== 'undefined') {
@@ -46,16 +90,6 @@ export function QuizClient({ quiz, questionNumber }: QuizClientProps) {
 
   if (currentQuestionIndex < 0 || currentQuestionIndex >= quiz.questions.length) {
     return notFound();
-  }
-
-  // Prevent skipping questions
-  const highestAnsweredIndex = Object.keys(answers).length > 0
-    ? Math.max(...Object.keys(answers).map(qId => quiz.questions.findIndex(q => q.id === qId)))
-    : -1;
-  
-  if (currentQuestionIndex > highestAnsweredIndex + 1) {
-    router.replace(`${pathname}?question=${highestAnsweredIndex + 2}`);
-    return null; // or a loading spinner
   }
   
   const currentQuestion = quiz.questions[currentQuestionIndex];
@@ -84,16 +118,12 @@ export function QuizClient({ quiz, questionNumber }: QuizClientProps) {
       router.push(`${pathname}?question=${questionNumber - 1}`);
     }
   };
+
+  const handleQuestionSelect = (qNumber: number) => {
+      router.push(`${pathname}?question=${qNumber}`);
+  }
   
   const handleSubmit = async () => {
-    if (Object.keys(answers).length !== quiz.questions.length) {
-        toast({
-            variant: "destructive",
-            title: "Incomplete Quiz",
-            description: "Please answer all questions before submitting.",
-        });
-        return;
-    }
     setIsSubmitting(true);
 
     if (!user || !userProfile) {
@@ -143,69 +173,107 @@ export function QuizClient({ quiz, questionNumber }: QuizClientProps) {
         setIsSubmitting(false);
     }
   };
-
-
-  return (
-    <div className="flex-1 flex flex-col justify-center items-center">
-        <div className="w-full max-w-2xl space-y-4">
-        <div className="text-center">
-            <h1 className="text-2xl font-bold">{quiz.title}</h1>
-            <p className="text-muted-foreground">Question {currentQuestionIndex + 1} of {quiz.questions.length}</p>
-        </div>
-        <Progress value={progress} className="w-full" />
-        <Card className="shadow-lg">
+  
+  const palette = (
+        <Card>
             <CardHeader>
-                <CardTitle>{currentQuestion.question}</CardTitle>
+                <CardTitle>Questions</CardTitle>
             </CardHeader>
             <CardContent>
-                <RadioGroup
-                    value={answers[currentQuestion.id] || ''}
-                    onValueChange={(value) => handleOptionChange(currentQuestion.id, value)}
-                    className="space-y-2"
-                >
-                    {currentQuestion.options.map((option, index) => (
-                        <div key={index} className="flex items-center space-x-2 rounded-md border p-4 has-[:checked]:border-primary has-[:checked]:bg-secondary">
-                            <RadioGroupItem value={option} id={`${currentQuestion.id}-${index}`} />
-                            <Label htmlFor={`${currentQuestion.id}-${index}`} className="flex-1 cursor-pointer">{option}</Label>
-                        </div>
-                    ))}
-                </RadioGroup>
+                <QuestionPalette
+                    totalQuestions={quiz.questions.length}
+                    answers={answers}
+                    currentQuestionIndex={currentQuestionIndex}
+                    onQuestionSelect={handleQuestionSelect}
+                />
             </CardContent>
-            <CardFooter className="flex justify-between">
-                <Button variant="outline" onClick={handlePrevious} disabled={currentQuestionIndex === 0}>
-                    Previous
-                </Button>
-                {currentQuestionIndex === quiz.questions.length - 1 ? (
-                    <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                            <Button className="bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isSubmitting || !answers[currentQuestion.id]}>
-                                {isSubmitting ? 'Submitting...' : 'Submit Quiz'}
-                            </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>Are you sure you want to submit?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    You cannot change your answers after submitting. Your result will be calculated based on your current selections.
-                                </AlertDialogDescription>
-
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleSubmit} className="bg-accent hover:bg-accent/90 text-accent-foreground">
-                                    Confirm & Submit
-                                </AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
-                ) : (
-                    <Button onClick={handleNext}>
-                        Next
-                    </Button>
-                )}
-            </CardFooter>
         </Card>
+    );
+
+  return (
+    <div className="flex-1 flex flex-col md:flex-row gap-8">
+      <div className="flex-1 flex flex-col justify-center items-center">
+        <div className="w-full max-w-2xl space-y-4">
+            <div className="text-center">
+                <h1 className="text-2xl font-bold">{quiz.title}</h1>
+                <p className="text-muted-foreground">Question {currentQuestionIndex + 1} of {quiz.questions.length}</p>
+            </div>
+            <Progress value={progress} className="w-full" />
+            <Card className="shadow-lg">
+                <CardHeader>
+                    <CardTitle>{currentQuestion.question}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <RadioGroup
+                        value={answers[currentQuestion.id] || ''}
+                        onValueChange={(value) => handleOptionChange(currentQuestion.id, value)}
+                        className="space-y-2"
+                    >
+                        {currentQuestion.options.map((option, index) => (
+                            <div key={index} className="flex items-center space-x-2 rounded-md border p-4 has-[:checked]:border-primary has-[:checked]:bg-secondary">
+                                <RadioGroupItem value={option} id={`${currentQuestion.id}-${index}`} />
+                                <Label htmlFor={`${currentQuestion.id}-${index}`} className="flex-1 cursor-pointer">{option}</Label>
+                            </div>
+                        ))}
+                    </RadioGroup>
+                </CardContent>
+                <CardFooter className="flex justify-between">
+                    <Button variant="outline" onClick={handlePrevious} disabled={currentQuestionIndex === 0}>
+                        Previous
+                    </Button>
+                    {currentQuestionIndex === quiz.questions.length - 1 ? (
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button className="bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isSubmitting}>
+                                    {isSubmitting ? 'Submitting...' : 'Submit Quiz'}
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you sure you want to submit?</AlertDialogTitle>
+                                     <AlertDialogDescription>
+                                        You have attempted {Object.keys(answers).length} out of {quiz.questions.length} questions. You cannot change your answers after submitting.
+                                    </AlertDialogDescription>
+
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleSubmit} className="bg-accent hover:bg-accent/90 text-accent-foreground">
+                                        Confirm & Submit
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    ) : (
+                        <Button onClick={handleNext}>
+                            Next
+                        </Button>
+                    )}
+                </CardFooter>
+            </Card>
         </div>
+      </div>
+      <aside className="w-full md:w-64 md:pt-20">
+          {isMobile ? (
+               <Drawer>
+                    <DrawerTrigger asChild>
+                        <Button variant="outline" className="fixed bottom-4 right-4 z-50 h-12 w-12 rounded-full shadow-lg md:hidden">
+                            <PanelLeft className="h-6 w-6" />
+                        </Button>
+                    </DrawerTrigger>
+                    <DrawerContent>
+                        <DrawerHeader>
+                            <DrawerTitle>Questions</DrawerTitle>
+                        </DrawerHeader>
+                        <div className="p-4">
+                           {palette}
+                        </div>
+                    </DrawerContent>
+                </Drawer>
+          ) : (
+            palette
+          )}
+        </aside>
     </div>
   );
 }
