@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { StudentLayout } from '@/components/student/student-layout';
 import { useToast } from '@/hooks/use-toast';
 import { firestore } from '@/lib/firebase';
-import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { useAuth } from '@/hooks/use-auth';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
@@ -33,8 +33,7 @@ export default function StudentResultsPage() {
         try {
           const resultsQuery = query(
             collection(firestore, 'results'),
-            where('studentId', '==', user.uid),
-            orderBy('createdAt', 'desc')
+            where('studentId', '==', user.uid)
           );
           const resultsSnapshot = await getDocs(resultsQuery);
 
@@ -54,6 +53,10 @@ export default function StudentResultsPage() {
               createdAt: data.createdAt?.toDate(),
             };
           });
+
+          // Sort the results on the client-side
+          resultsData.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+          
           setPastResults(resultsData);
         } catch (error: any) {
           console.error("Error fetching past results:", error);
