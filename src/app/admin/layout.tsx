@@ -18,6 +18,7 @@ import {
   SidebarMenuButton,
   SidebarFooter,
   SidebarInset,
+  SidebarMenuSkeleton,
 } from '@/components/ui/sidebar';
 import { Logo } from '@/components/logo';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -38,8 +39,20 @@ const navItems = [
   { href: '/admin/export', label: 'Export Data', icon: FileOutput },
 ];
 
-function NavContent({ onLinkClick }: { onLinkClick?: () => void }) {
+function NavContent({ isLoading, onLinkClick }: { isLoading: boolean; onLinkClick?: () => void }) {
     const pathname = usePathname();
+
+    if (isLoading) {
+        return (
+            <>
+                <SidebarMenuSkeleton showIcon />
+                <SidebarMenuSkeleton showIcon />
+                <SidebarMenuSkeleton showIcon />
+                <SidebarMenuSkeleton showIcon />
+            </>
+        );
+    }
+
     return (
         <>
             {navItems.map((item) => (
@@ -67,6 +80,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
 
   useEffect(() => {
+    if (!loading && !user) {
+      router.replace('/admin/login');
+      return;
+    }
     if (!loading && user && !user.email?.endsWith('@ieccollege.com')) {
       signOut(auth);
       router.replace('/admin/login');
@@ -79,9 +96,30 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     router.push('/admin/login');
   };
   
-  if (pathname === '/admin/login') {
+  if (pathname === '/admin/login' || pathname === '/admin/signup') {
     return <>{children}</>;
   }
+
+  // Show a full-page loader until auth state is determined
+  if (loading) {
+     return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="flex items-center space-x-2">
+          <svg className="animate-spin h-5 w-5 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span>Authenticating...</span>
+        </div>
+      </div>
+    );
+  }
+  
+  // If not loading and no user, we will redirect, but can return null to avoid flash
+  if (!user) {
+    return null;
+  }
+
 
   return (
     <SidebarProvider>
@@ -91,7 +129,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
-            <NavContent />
+            <NavContent isLoading={loading} />
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter className='items-center'>
@@ -138,7 +176,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     </SidebarHeader>
                      <SidebarContent className='!p-0 !px-2.5 mt-4'>
                         <SidebarMenu>
-                            <NavContent onLinkClick={() => setMobileSheetOpen(false)} />
+                            <NavContent isLoading={loading} onLinkClick={() => setMobileSheetOpen(false)} />
                         </SidebarMenu>
                     </SidebarContent>
                     <SidebarFooter className='!p-0 !px-2.5 mt-auto'>
