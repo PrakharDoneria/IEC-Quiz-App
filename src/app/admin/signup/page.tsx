@@ -16,7 +16,7 @@ import { auth, firestore } from '@/lib/firebase';
 import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { useState } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, ShieldAlert } from 'lucide-react';
 
 const signupSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -25,6 +25,10 @@ const signupSchema = z.object({
     { message: 'Only @ieccollege.com emails are allowed for admin registration.' }
   ),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
+  securityCode: z.string().refine(
+    (code) => code === 'IEC@926#',
+    { message: 'Invalid security code.' }
+  ),
 });
 
 type SignupFormValues = z.infer<typeof signupSchema>;
@@ -40,6 +44,7 @@ export default function AdminSignupPage() {
       name: '',
       email: '',
       password: '',
+      securityCode: '',
     },
   });
 
@@ -127,6 +132,22 @@ export default function AdminSignupPage() {
                         >
                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </Button>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <FormField
+                control={form.control}
+                name="securityCode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Security Code</FormLabel>
+                    <FormControl>
+                       <div className="relative">
+                        <ShieldAlert className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input type="password" placeholder="Enter security code" {...field} className="pl-10" />
                       </div>
                     </FormControl>
                     <FormMessage />
