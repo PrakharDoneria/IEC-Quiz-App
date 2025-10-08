@@ -16,6 +16,7 @@ import { auth } from '@/lib/firebase';
 import { signInWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { useAuth } from '@/hooks/use-auth';
 import { Eye, EyeOff } from 'lucide-react';
+import Link from 'next/link';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
@@ -145,10 +146,16 @@ export default function AdminLoginPage() {
                 )}
               />
             </CardContent>
-            <CardFooter>
+            <CardFooter className="flex flex-col gap-4">
               <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
                 {form.formState.isSubmitting ? 'Logging in...' : 'Login'}
               </Button>
+               <p className="text-sm text-center text-muted-foreground">
+                Don&apos;t have an admin account?{' '}
+                <Link href="/admin/signup" className="font-medium text-primary hover:underline">
+                    Sign up
+                </Link>
+                </p>
             </CardFooter>
           </form>
         </Form>
