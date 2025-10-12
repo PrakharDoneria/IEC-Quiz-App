@@ -1,3 +1,4 @@
+
 import type { Metadata } from 'next';
 import { PT_Sans } from 'next/font/google';
 import './globals.css';
@@ -34,11 +35,6 @@ export default function RootLayout({
           ptSans.variable
         )}
       >
-        <div className="pointer-events-none fixed left-0 top-0 z-[9999] h-32 w-32 overflow-hidden">
-            <div className="absolute -left-12 top-8 w-48 rotate-[-45deg] bg-red-600 py-1 text-center text-xs font-bold uppercase text-white shadow-lg">
-                Under Testing
-            </div>
-        </div>
         <AuthProvider>
             {children}
         </AuthProvider>
