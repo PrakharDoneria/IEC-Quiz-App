@@ -192,8 +192,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </Sheet>
              <h1 className="font-semibold text-lg">IEC Quiz Admin</h1>
         </header>
-        <main className="p-4 sm:p-6 lg:p-8">
-          {children}
+        <main className="flex-1 flex flex-col p-4 sm:p-6 lg:p-8">
+            <div className='flex-1'>
+                {children}
+            </div>
+            <footer className="mt-8 pt-4 border-t text-center">
+                <p className="text-sm text-muted-foreground">
+                    Made by <a href="https://www.linkedin.com/in/prakhar-doneria/" target="_blank" rel="noopener noreferrer" className="font-medium text-primary hover:underline">Prakhar Doneria</a>
+                </p>
+            </footer>
         </main>
       </SidebarInset>
     </SidebarProvider>

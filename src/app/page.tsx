@@ -50,9 +50,12 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className="container mx-auto flex flex-col items-center justify-between gap-2 border-t py-4 text-center sm:flex-row">
+      <footer className="container mx-auto flex flex-col items-center justify-between gap-4 border-t py-4 text-center sm:flex-row">
         <p className="text-sm text-muted-foreground">
           &copy; {new Date().getFullYear()} IEC Group of Institutions. All rights reserved.
+        </p>
+        <p className="text-sm text-muted-foreground">
+            Made by <a href="https://www.linkedin.com/in/prakhar-doneria/" target="_blank" rel="noopener noreferrer" className="font-medium text-primary hover:underline">Prakhar Doneria</a>
         </p>
          <Link href="/admin/login" className="text-sm text-muted-foreground hover:text-primary">
             Admin

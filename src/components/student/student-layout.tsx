@@ -108,6 +108,14 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
             <main className="flex flex-1 flex-col container mx-auto px-4 py-8">
                 {children}
             </main>
+            <footer className="container mx-auto flex flex-col items-center justify-between gap-4 border-t py-4 text-center sm:flex-row">
+                <p className="text-sm text-muted-foreground">
+                &copy; {new Date().getFullYear()} IEC Group of Institutions. All rights reserved.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                    Made by <a href="https://www.linkedin.com/in/prakhar-doneria/" target="_blank" rel="noopener noreferrer" className="font-medium text-primary hover:underline">Prakhar Doneria</a>
+                </p>
+            </footer>
         </div>
     );
 }
