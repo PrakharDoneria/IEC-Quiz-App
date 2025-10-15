@@ -10,6 +10,7 @@ export type Quiz = {
   code: string;
   title: string;
   questions: Question[];
+  duration: number; // Duration in seconds
 };
 
 export type Result = {

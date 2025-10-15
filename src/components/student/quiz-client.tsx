@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, usePathname, notFound } from 'next/navigation';
 import type { Quiz } from '@/lib/data';
 import { Button } from '@/components/ui/button';
@@ -13,7 +14,7 @@ import { firestore, auth } from '@/lib/firebase';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
-import { PanelLeft } from 'lucide-react';
+import { PanelLeft, Clock } from 'lucide-react';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -25,6 +26,13 @@ interface QuizClientProps {
     quiz: Quiz;
     questionNumber: number;
 }
+
+const formatTime = (seconds: number) => {
+    const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+    const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+    const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+    return `${h}:${m}:${s}`;
+};
 
 function QuestionPalette({
     totalQuestions,
@@ -40,7 +48,7 @@ function QuestionPalette({
     return (
         <div className="grid grid-cols-5 gap-2">
             {Array.from({ length: totalQuestions }).map((_, i) => {
-                const questionId = `q${i + 1}`;
+                const questionId = quiz.questions[i].id;
                 const isAttempted = answers.hasOwnProperty(questionId);
                 const isCurrent = i === currentQuestionIndex;
 
@@ -63,13 +71,14 @@ function QuestionPalette({
     );
 }
 
-
 export function QuizClient({ quiz, questionNumber }: QuizClientProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
   const { user, userProfile } = useAuth();
   const isMobile = useIsMobile();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submitHasBeenCalled = useRef(false);
   
   const [answers, setAnswers] = useState<Answers>(() => {
     if (typeof window !== 'undefined') {
@@ -79,7 +88,9 @@ export function QuizClient({ quiz, questionNumber }: QuizClientProps) {
     return {};
   });
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(quiz.duration);
+  const [timeUpAlertOpen, setTimeUpAlertOpen] = useState(false);
+  
   const currentQuestionIndex = questionNumber - 1;
   
   useEffect(() => {
@@ -87,6 +98,41 @@ export function QuizClient({ quiz, questionNumber }: QuizClientProps) {
         sessionStorage.setItem(`quiz-${quiz.id}-answers`, JSON.stringify(answers));
     }
   }, [answers, quiz.id]);
+
+  useEffect(() => {
+    const endTimeKey = `quiz-${quiz.id}-endTime`;
+    let storedEndTime = sessionStorage.getItem(endTimeKey);
+    let endTime: number;
+
+    if (storedEndTime) {
+        endTime = parseInt(storedEndTime, 10);
+    } else {
+        endTime = Date.now() + quiz.duration * 1000;
+        sessionStorage.setItem(endTimeKey, endTime.toString());
+    }
+
+    const timer = setInterval(() => {
+        const now = Date.now();
+        const remaining = Math.max(0, Math.floor((endTime - now) / 1000));
+        setTimeLeft(remaining);
+
+        if (remaining === 0) {
+            clearInterval(timer);
+            if (!submitHasBeenCalled.current) {
+                setTimeUpAlertOpen(true);
+            }
+        }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [quiz.id, quiz.duration]);
+
+
+  useEffect(() => {
+    if (timeUpAlertOpen && !submitHasBeenCalled.current) {
+      handleSubmit(true); // true indicates auto-submission
+    }
+  }, [timeUpAlertOpen]);
 
   if (currentQuestionIndex < 0 || currentQuestionIndex >= quiz.questions.length) {
     return notFound();
@@ -123,7 +169,9 @@ export function QuizClient({ quiz, questionNumber }: QuizClientProps) {
       router.push(`${pathname}?question=${qNumber}`);
   }
   
-  const handleSubmit = async () => {
+  const handleSubmit = async (isAutoSubmit = false) => {
+    if (submitHasBeenCalled.current) return;
+    submitHasBeenCalled.current = true;
     setIsSubmitting(true);
 
     if (!user || !userProfile) {
@@ -136,7 +184,6 @@ export function QuizClient({ quiz, questionNumber }: QuizClientProps) {
         router.push('/login');
         return;
     }
-
 
     let score = 0;
     quiz.questions.forEach(q => {
@@ -160,6 +207,14 @@ export function QuizClient({ quiz, questionNumber }: QuizClientProps) {
         
         if (typeof window !== 'undefined') {
             sessionStorage.removeItem(`quiz-${quiz.id}-answers`);
+            sessionStorage.removeItem(`quiz-${quiz.id}-endTime`);
+        }
+        
+        if (isAutoSubmit) {
+            toast({
+                title: "Time's Up!",
+                description: "Your quiz has been automatically submitted."
+            });
         }
 
         router.push(`/student/result/${docRef.id}?score=${score}&total=${quiz.questions.length}`);
@@ -171,6 +226,7 @@ export function QuizClient({ quiz, questionNumber }: QuizClientProps) {
             description: error.message || "Could not save your quiz results. Please try again.",
         });
         setIsSubmitting(false);
+        submitHasBeenCalled.current = false;
     }
   };
   
@@ -192,10 +248,27 @@ export function QuizClient({ quiz, questionNumber }: QuizClientProps) {
 
   return (
     <div className="flex-1 flex flex-col md:flex-row gap-8">
+      <AlertDialog open={timeUpAlertOpen}>
+          <AlertDialogContent>
+              <AlertDialogHeader>
+                  <AlertDialogTitle>Time is Up!</AlertDialogTitle>
+                  <AlertDialogDescription>
+                      Your time for this quiz has expired. Your answers will now be submitted automatically.
+                  </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                   <Button disabled>Submitting...</Button>
+              </AlertDialogFooter>
+          </AlertDialogContent>
+      </AlertDialog>
       <div className="flex-1 flex flex-col justify-center items-center">
         <div className="w-full max-w-2xl space-y-4">
-            <div className="text-center">
+            <div className="text-center space-y-2">
                 <h1 className="text-2xl font-bold">{quiz.title}</h1>
+                <div className='flex items-center justify-center gap-2 font-mono text-lg font-semibold text-destructive'>
+                    <Clock className='h-5 w-5'/>
+                    <span>{formatTime(timeLeft)}</span>
+                </div>
                 <p className="text-muted-foreground">Question {currentQuestionIndex + 1} of {quiz.questions.length}</p>
             </div>
             <Progress value={progress} className="w-full" />
@@ -238,8 +311,8 @@ export function QuizClient({ quiz, questionNumber }: QuizClientProps) {
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={handleSubmit} className="bg-accent hover:bg-accent/90 text-accent-foreground">
-                                        Confirm & Submit
+                                    <AlertDialogAction onClick={() => handleSubmit(false)} className="bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isSubmitting}>
+                                        {isSubmitting ? 'Submitting...' : 'Confirm & Submit'}
                                     </AlertDialogAction>
                                 </AlertDialogFooter>
                             </AlertDialogContent>

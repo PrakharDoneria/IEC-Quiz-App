@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Download, Upload } from 'lucide-react';
+import { Download, Upload, Clock } from 'lucide-react';
 import { firestore } from '@/lib/firebase';
 import { addDoc, collection } from 'firebase/firestore';
 import type { Question } from '@/lib/data';
@@ -18,6 +18,7 @@ import { useState } from 'react';
 const uploadSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters.'),
   code: z.string().min(3, 'Code must be at least 3 characters.').max(10, 'Code cannot exceed 10 characters.'),
+  duration: z.coerce.number().min(1, 'Duration must be at least 1 minute.'),
   file: z.any().refine((files) => files?.length === 1, 'Excel file is required.'),
 });
 
@@ -32,6 +33,7 @@ export default function UploadQuizPage() {
     defaultValues: {
       title: '',
       code: '',
+      duration: 10,
       file: null,
     }
   });
@@ -98,6 +100,7 @@ export default function UploadQuizPage() {
         await addDoc(collection(firestore, 'quizzes'), {
             title: data.title,
             code: data.code.toUpperCase(),
+            duration: data.duration * 60, // Convert minutes to seconds
             questions: questions,
         });
 
@@ -105,7 +108,7 @@ export default function UploadQuizPage() {
             title: 'Quiz Created!',
             description: `Quiz "${data.title}" with code "${data.code}" has been created.`,
         });
-        form.reset({title: '', code: '', file: null});
+        form.reset({title: '', code: '', file: null, duration: 10});
         // This will allow a user to re-upload the same file name
         if(fileRef?.ref) {
             (fileRef.ref as HTMLInputElement).value = '';
@@ -137,33 +140,51 @@ export default function UploadQuizPage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              <FormField
-                control={form.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Quiz Title</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Advanced Calculus" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="code"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Unique Quiz Code</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., CALC201" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
+                <div className="grid md:grid-cols-2 gap-4">
+                    <FormField
+                        control={form.control}
+                        name="title"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Quiz Title</FormLabel>
+                            <FormControl>
+                            <Input placeholder="e.g., Advanced Calculus" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="code"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Unique Quiz Code</FormLabel>
+                            <FormControl>
+                            <Input placeholder="e.g., CALC201" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                </div>
+                <FormField
+                    control={form.control}
+                    name="duration"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Duration (in minutes)</FormLabel>
+                        <FormControl>
+                            <div className='relative'>
+                                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input type="number" placeholder="e.g., 60" {...field} className='pl-10' />
+                            </div>
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+
               <FormItem>
                 <FormLabel>Questions File (.xlsx)</FormLabel>
                 <p className='text-xs text-muted-foreground'>The file should have columns: Question, Option 1, Option 2, Option 3, Option 4, Correct Answer.</p>
