@@ -2,24 +2,82 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StudentLayout } from '@/components/student/student-layout';
 import { useToast } from '@/hooks/use-toast';
 import { firestore } from '@/lib/firebase';
-import { collection, getDocs, query, where, limit } from 'firebase/firestore';
+import { collection, getDocs, query, where, limit, orderBy } from 'firebase/firestore';
 import { useAuth } from '@/hooks/use-auth';
+import { LogIn, History } from 'lucide-react';
+import type { Result } from '@/lib/data';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { format } from 'date-fns';
+import { Skeleton } from '@/components/ui/skeleton';
+import Link from 'next/link';
+
+interface PastResult extends Result {
+  quizTitle: string;
+}
 
 export default function StudentDashboard() {
   const router = useRouter();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const [quizCode, setQuizCode] = useState('');
   const [loading, setLoading] = useState(false);
-  
+  const [recentResults, setRecentResults] = useState<PastResult[]>([]);
+  const [loadingResults, setLoadingResults] = useState(true);
+
+  useEffect(() => {
+    if (user) {
+      const fetchRecentResults = async () => {
+        setLoadingResults(true);
+        try {
+          const resultsQuery = query(
+            collection(firestore, 'results'),
+            where('studentId', '==', user.uid),
+            orderBy('createdAt', 'desc'),
+            limit(3)
+          );
+          const resultsSnapshot = await getDocs(resultsQuery);
+          
+          if (resultsSnapshot.empty) {
+            setRecentResults([]);
+            return;
+          }
+
+          const quizzesSnapshot = await getDocs(collection(firestore, 'quizzes'));
+          const quizzesData: { [id: string]: string } = {};
+          quizzesSnapshot.forEach(doc => {
+            quizzesData[doc.id] = doc.data().title;
+          });
+
+          const resultsData = resultsSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              quizTitle: quizzesData[data.quizId] || 'Unknown Quiz',
+              score: data.score,
+              total: data.total,
+              createdAt: data.createdAt?.toDate(),
+            } as PastResult;
+          });
+
+          setRecentResults(resultsData);
+        } catch (error) {
+          console.error("Error fetching recent results:", error);
+        } finally {
+          setLoadingResults(false);
+        }
+      };
+      fetchRecentResults();
+    }
+  }, [user]);
+
   const handleStartQuiz = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!quizCode.trim()) {
@@ -50,7 +108,6 @@ export default function StudentDashboard() {
             const quizDoc = querySnapshot.docs[0];
             const quizId = quizDoc.id;
 
-            // Check if the student has already taken this quiz
             const resultsQuery = query(
                 collection(firestore, 'results'), 
                 where('studentId', '==', user.uid),
@@ -83,32 +140,89 @@ export default function StudentDashboard() {
 
   return (
     <StudentLayout>
-        <div className="flex justify-center items-center h-full">
-            <Card className="w-full max-w-md shadow-lg">
+      <div className="flex-1 space-y-8 p-4 sm:p-6 lg:p-8">
+        <div className="space-y-2">
+            <h1 className="text-3xl font-bold tracking-tight">Welcome, {userProfile?.name?.split(' ')[0] || 'Student'}!</h1>
+            <p className="text-muted-foreground">Ready to test your knowledge? Enter a quiz code or review your past results.</p>
+        </div>
+
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+          <Card className="lg:col-span-1 shadow-sm">
             <CardHeader>
-                <CardTitle>Ready for a Challenge?</CardTitle>
-                <CardDescription>Enter the unique quiz code provided by your administrator to begin.</CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                    <LogIn className="h-5 w-5 text-primary" />
+                    <span>Start a New Quiz</span>
+                </CardTitle>
+                <CardDescription>Enter the unique quiz code to begin.</CardDescription>
             </CardHeader>
             <CardContent>
                 <form onSubmit={handleStartQuiz} className="space-y-4">
                 <div className="space-y-2">
-                    <Label htmlFor="quiz-code">Quiz Code</Label>
+                    <Label htmlFor="quiz-code" className="sr-only">Quiz Code</Label>
                     <Input
                     id="quiz-code"
                     value={quizCode}
                     onChange={(e) => setQuizCode(e.target.value.toUpperCase())}
-                    placeholder="e.g., CALC201"
-                    className="text-center text-lg tracking-widest"
+                    placeholder="ENTER QUIZ CODE"
+                    className="text-center text-lg tracking-widest font-mono h-12"
                     autoCapitalize="characters"
                     />
                 </div>
-                <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" disabled={!quizCode || loading}>
+                <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground h-12 text-base" disabled={!quizCode || loading}>
                     {loading ? 'Verifying...' : 'Start Quiz'}
                 </Button>
                 </form>
             </CardContent>
-            </Card>
+          </Card>
+
+          <Card className="lg:col-span-2 shadow-sm">
+            <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                    <div className='flex items-center gap-2'>
+                        <History className="h-5 w-5 text-primary" />
+                        <span>Recent Activity</span>
+                    </div>
+                    <Button variant="link" asChild>
+                        <Link href="/student/results">View All</Link>
+                    </Button>
+                </CardTitle>
+                 <CardDescription>Your last 3 quiz attempts.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                 {loadingResults ? (
+                  <div className="space-y-2">
+                      <Skeleton className="h-10 w-full" />
+                      <Skeleton className="h-10 w-full" />
+                      <Skeleton className="h-10 w-full" />
+                  </div>
+              ) : recentResults.length > 0 ? (
+                  <Table>
+                      <TableHeader>
+                          <TableRow>
+                              <TableHead>Quiz</TableHead>
+                              <TableHead className="text-center">Score</TableHead>
+                              <TableHead className="text-right">Date</TableHead>
+                          </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                          {recentResults.map(result => (
+                              <TableRow key={result.id}>
+                                  <TableCell className="font-medium">{result.quizTitle}</TableCell>
+                                  <TableCell className="text-center">{result.score}/{result.total}</TableCell>
+                                  <TableCell className="text-right">
+                                      {result.createdAt ? format(result.createdAt, 'PP') : 'N/A'}
+                                  </TableCell>
+                              </TableRow>
+                          ))}
+                      </TableBody>
+                  </Table>
+              ) : (
+                  <p className="text-center text-muted-foreground py-8">You haven&apos;t completed any quizzes yet.</p>
+              )}
+            </CardContent>
+          </Card>
         </div>
+      </div>
     </StudentLayout>
   );
 }
