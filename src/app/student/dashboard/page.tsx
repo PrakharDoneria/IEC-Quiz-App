@@ -39,14 +39,13 @@ export default function StudentDashboard() {
         try {
           const resultsQuery = query(
             collection(firestore, 'results'),
-            where('studentId', '==', user.uid),
-            orderBy('createdAt', 'desc'),
-            limit(3)
+            where('studentId', '==', user.uid)
           );
           const resultsSnapshot = await getDocs(resultsQuery);
           
           if (resultsSnapshot.empty) {
             setRecentResults([]);
+            setLoadingResults(false);
             return;
           }
 
@@ -66,8 +65,11 @@ export default function StudentDashboard() {
               createdAt: data.createdAt?.toDate(),
             } as PastResult;
           });
+          
+          // Sort on the client side and take the top 3
+          resultsData.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+          setRecentResults(resultsData.slice(0, 3));
 
-          setRecentResults(resultsData);
         } catch (error) {
           console.error("Error fetching recent results:", error);
         } finally {
