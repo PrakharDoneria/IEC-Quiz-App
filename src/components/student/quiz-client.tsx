@@ -14,8 +14,8 @@ import { firestore, auth } from '@/lib/firebase';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
-import { PanelLeft, Clock } from 'lucide-react';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer';
+import { PanelLeft, Clock, HelpCircle, Send } from 'lucide-react';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger, DrawerDescription, DrawerFooter } from '@/components/ui/drawer';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -48,7 +48,7 @@ function QuestionPalette({
     onQuestionSelect: (qNumber: number) => void;
 }) {
     return (
-        <div className="grid grid-cols-5 gap-2">
+        <div className="grid grid-cols-5 md:grid-cols-4 lg:grid-cols-5 gap-2">
             {Array.from({ length: totalQuestions }).map((_, i) => {
                 const questionId = quiz.questions[i].id;
                 const isAttempted = answers.hasOwnProperty(questionId);
@@ -57,11 +57,11 @@ function QuestionPalette({
                 return (
                     <Button
                         key={i}
-                        variant={isAttempted ? 'default' : 'outline'}
+                        variant={isCurrent ? "default" : isAttempted ? 'secondary' : 'outline'}
                         className={cn(
                             "h-10 w-10 p-0",
-                            isCurrent && "ring-2 ring-primary ring-offset-2",
-                             isAttempted ? 'bg-green-600 hover:bg-green-700 text-white': ''
+                             isCurrent && "ring-2 ring-primary-foreground ring-offset-2 ring-offset-primary",
+                             isAttempted && !isCurrent ? 'bg-green-600 hover:bg-green-700 text-white': ''
                         )}
                         onClick={() => onQuestionSelect(i + 1)}
                     >
@@ -190,21 +190,13 @@ useEffect(() => {
   }
   
   const currentQuestion = quiz.questions[currentQuestionIndex];
-  const progress = ((currentQuestionIndex + 1) / quiz.questions.length) * 100;
+  const progress = (Object.keys(answers).length / quiz.questions.length) * 100;
 
   const handleOptionChange = (questionId: string, option: string) => {
     setAnswers(prev => ({ ...prev, [questionId]: option }));
   };
 
   const handleNext = () => {
-    if (!answers[currentQuestion.id]) {
-        toast({
-            variant: "destructive",
-            title: "Please select an answer",
-            description: "You must select an answer before proceeding.",
-        });
-        return;
-    }
     if (currentQuestionIndex < quiz.questions.length - 1) {
       router.push(`${pathname}?question=${questionNumber + 1}`);
     }
@@ -284,13 +276,63 @@ useEffect(() => {
         submitHasBeenCalled.current = false;
     }
   };
+
+  const FinalSubmitButton = ({ isDrawer = false }) => (
+    <AlertDialog>
+        <AlertDialogTrigger asChild>
+            <Button 
+              className={cn("w-full bg-accent hover:bg-accent/90 text-accent-foreground", isDrawer ? "mt-4" : "mt-auto")} 
+              disabled={isSubmitting}
+            >
+                <Send className="mr-2 h-4 w-4" />
+                {isSubmitting ? 'Submitting...' : 'Submit Quiz'}
+            </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure you want to submit?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    You have attempted {Object.keys(answers).length} out of {quiz.questions.length} questions. You cannot change your answers after submitting.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => handleSubmit(false)} className="bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isSubmitting}>
+                    {isSubmitting ? 'Submitting...' : 'Confirm & Submit'}
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+  );
+
   
-  const palette = (
+  const controlPanel = (
+    <div className="flex flex-col h-full space-y-6">
+        <div>
+            <h2 className="text-xl font-bold mb-2">{quiz.title}</h2>
+            <div className='flex items-center justify-center gap-2 font-mono text-3xl font-semibold text-destructive p-3 bg-destructive/10 rounded-lg'>
+                <Clock className='h-8 w-8'/>
+                <span>{formatTime(timeLeft)}</span>
+            </div>
+        </div>
+
         <Card>
-            <CardHeader>
-                <CardTitle>Questions</CardTitle>
+            <CardHeader className="p-4">
+                <CardTitle className="flex items-center justify-between text-lg">
+                    <span>Progress</span>
+                    <span className="text-base font-medium text-muted-foreground">{Object.keys(answers).length} / {quiz.questions.length}</span>
+                </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 pt-0">
+                <Progress value={progress} />
+            </CardContent>
+        </Card>
+
+        <Card className="flex-1">
+            <CardHeader className="p-4">
+                <CardTitle className="text-lg">Questions</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
                 <QuestionPalette
                     quiz={quiz}
                     totalQuestions={quiz.questions.length}
@@ -300,7 +342,10 @@ useEffect(() => {
                 />
             </CardContent>
         </Card>
-    );
+        
+        <FinalSubmitButton />
+    </div>
+  );
 
   return (
     <div className="flex-1 flex flex-col md:flex-row gap-8">
@@ -317,92 +362,68 @@ useEffect(() => {
               </AlertDialogFooter>
           </AlertDialogContent>
       </AlertDialog>
-      <div className="flex-1 flex flex-col justify-center items-center">
+      
+      <div className="flex-1 flex flex-col justify-center items-center py-6">
         <div className="w-full max-w-2xl space-y-4">
-            <div className="text-center space-y-2">
-                <h1 className="text-2xl font-bold">{quiz.title}</h1>
-                <div className='flex items-center justify-center gap-2 font-mono text-lg font-semibold text-destructive'>
-                    <Clock className='h-5 w-5'/>
-                    <span>{formatTime(timeLeft)}</span>
-                </div>
-                <p className="text-muted-foreground">Question {currentQuestionIndex + 1} of {quiz.questions.length}</p>
-            </div>
-            <Progress value={progress} className="w-full" />
-            <Card className="shadow-lg">
+            <Card className="shadow-lg animate-in fade-in">
                 <CardHeader>
-                    <CardTitle>{currentQuestion.question}</CardTitle>
+                    <p className="text-sm text-muted-foreground mb-2">Question {currentQuestionIndex + 1} of {quiz.questions.length}</p>
+                    <CardTitle className="text-xl md:text-2xl">{currentQuestion.question}</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <RadioGroup
                         value={answers[currentQuestion.id] || ''}
                         onValueChange={(value) => handleOptionChange(currentQuestion.id, value)}
-                        className="space-y-2"
+                        className="space-y-3"
                     >
                         {currentQuestion.options.map((option, index) => (
-                            <div key={index} className="flex items-center space-x-2 rounded-md border p-4 has-[:checked]:border-primary has-[:checked]:bg-secondary">
+                            <div key={index} className="flex items-center space-x-3 rounded-lg border p-4 transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5 has-[:checked]:shadow-sm">
                                 <RadioGroupItem value={option} id={`${currentQuestion.id}-${index}`} />
-                                <Label htmlFor={`${currentQuestion.id}-${index}`} className="flex-1 cursor-pointer">{option}</Label>
+                                <Label htmlFor={`${currentQuestion.id}-${index}`} className="flex-1 cursor-pointer text-base">{option}</Label>
                             </div>
                         ))}
                     </RadioGroup>
                 </CardContent>
-                <CardFooter className="flex justify-between">
-                    <Button variant="outline" onClick={handlePrevious} disabled={currentQuestionIndex === 0}>
-                        Previous
-                    </Button>
-                    {currentQuestionIndex === quiz.questions.length - 1 ? (
-                        <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                                <Button className="bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isSubmitting}>
-                                    {isSubmitting ? 'Submitting...' : 'Submit Quiz'}
-                                </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                    <AlertDialogTitle>Are you sure you want to submit?</AlertDialogTitle>
-                                     <AlertDialogDescription>
-                                        You have attempted {Object.keys(answers).length} out of {quiz.questions.length} questions. You cannot change your answers after submitting.
-                                    </AlertDialogDescription>
-
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleSubmit(false)} className="bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isSubmitting}>
-                                        {isSubmitting ? 'Submitting...' : 'Confirm & Submit'}
-                                    </AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
-                    ) : (
-                        <Button onClick={handleNext}>
-                            Next
-                        </Button>
-                    )}
-                </CardFooter>
             </Card>
+            <div className="flex justify-between mt-6">
+                <Button variant="outline" size="lg" onClick={handlePrevious} disabled={currentQuestionIndex === 0}>
+                    Previous
+                </Button>
+                {currentQuestionIndex < quiz.questions.length - 1 && (
+                     <Button size="lg" onClick={handleNext}>
+                        Next
+                    </Button>
+                )}
+            </div>
         </div>
       </div>
-      <aside className="w-full md:w-64 md:pt-20">
+
+      <aside className="w-full md:w-80 lg:w-96 p-4 bg-muted/30 md:border-l md:py-6">
           {isMobile ? (
                <Drawer>
                     <DrawerTrigger asChild>
-                        <Button variant="outline" className="fixed bottom-4 right-4 z-50 h-12 w-12 rounded-full shadow-lg md:hidden">
+                        <Button variant="outline" className="fixed bottom-4 right-4 z-50 h-14 w-14 rounded-full shadow-lg md:hidden">
                             <PanelLeft className="h-6 w-6" />
                         </Button>
                     </DrawerTrigger>
                     <DrawerContent>
                         <DrawerHeader>
-                            <DrawerTitle>Questions</DrawerTitle>
+                            <DrawerTitle>Quiz Controls</DrawerTitle>
+                            <DrawerDescription>Navigate questions and track your time.</DrawerDescription>
                         </DrawerHeader>
-                        <div className="p-4">
-                           {palette}
+                        <div className="p-4 overflow-y-auto">
+                           {controlPanel}
                         </div>
                     </DrawerContent>
                 </Drawer>
           ) : (
-            palette
+            <div className="sticky top-20 h-[calc(100vh-6rem)]">
+                {controlPanel}
+            </div>
           )}
         </aside>
     </div>
   );
 }
+
+    
