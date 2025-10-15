@@ -35,11 +35,13 @@ const formatTime = (seconds: number) => {
 };
 
 function QuestionPalette({
+    quiz,
     totalQuestions,
     answers,
     currentQuestionIndex,
     onQuestionSelect,
 }: {
+    quiz: Quiz;
     totalQuestions: number;
     answers: Answers;
     currentQuestionIndex: number;
@@ -290,6 +292,7 @@ useEffect(() => {
             </CardHeader>
             <CardContent>
                 <QuestionPalette
+                    quiz={quiz}
                     totalQuestions={quiz.questions.length}
                     answers={answers}
                     currentQuestionIndex={currentQuestionIndex}
