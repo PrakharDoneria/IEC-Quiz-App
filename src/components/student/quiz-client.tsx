@@ -281,7 +281,7 @@ useEffect(() => {
     <AlertDialog>
         <AlertDialogTrigger asChild>
             <Button 
-              className={cn("w-full bg-accent hover:bg-accent/90 text-accent-foreground", isDrawer ? "mt-4" : "mt-auto")} 
+              className={cn("w-full bg-accent hover:bg-accent/90 text-accent-foreground", isDrawer && "mt-4")} 
               disabled={isSubmitting}
             >
                 <Send className="mr-2 h-4 w-4" />
@@ -328,7 +328,9 @@ useEffect(() => {
             </CardContent>
         </Card>
 
-        <Card>
+        <FinalSubmitButton />
+
+        <Card className="flex-1 overflow-y-auto">
             <CardHeader className="p-4">
                 <CardTitle className="text-lg">Questions</CardTitle>
             </CardHeader>
@@ -342,10 +344,6 @@ useEffect(() => {
                 />
             </CardContent>
         </Card>
-        
-        <div className="mt-auto">
-            <FinalSubmitButton />
-        </div>
     </div>
   );
 
