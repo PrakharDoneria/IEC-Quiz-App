@@ -23,7 +23,7 @@ import {
 import { Logo } from '@/components/logo';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Home, Upload, BarChart2, FileOutput, LogOut, PanelLeft } from 'lucide-react';
+import { Home, Upload, BarChart2, FileOutput, LogOut, PanelLeft, ClipboardList } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
@@ -35,6 +35,7 @@ import { useEffect, useState } from 'react';
 const navItems = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: Home },
   { href: '/admin/upload', label: 'Upload Quiz', icon: Upload },
+  { href: '/admin/quizzes', label: 'Manage Quizzes', icon: ClipboardList },
   { href: '/admin/results', label: 'Results', icon: BarChart2 },
   { href: '/admin/export', label: 'Export Data', icon: FileOutput },
 ];
@@ -45,6 +46,7 @@ function NavContent({ isLoading, onLinkClick }: { isLoading: boolean; onLinkClic
     if (isLoading) {
         return (
             <>
+                <SidebarMenuSkeleton showIcon />
                 <SidebarMenuSkeleton showIcon />
                 <SidebarMenuSkeleton showIcon />
                 <SidebarMenuSkeleton showIcon />
