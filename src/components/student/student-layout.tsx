@@ -110,7 +110,7 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
                     </DropdownMenu>
                 </div>
             </header>
-            <main className="flex flex-1 flex-col container mx-auto px-4 py-8">
+            <main className="flex flex-1 flex-col">
                 {children}
             </main>
             <footer className="container mx-auto flex flex-col items-center justify-between gap-4 border-t py-4 text-center sm:flex-row">
