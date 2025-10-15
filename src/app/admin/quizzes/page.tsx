@@ -9,15 +9,21 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { firestore } from '@/lib/firebase';
-import { collection, getDocs, orderBy, query } from 'firebase/firestore';
+import { collection, getDocs, orderBy, query, doc, deleteDoc } from 'firebase/firestore';
 import type { Quiz } from '@/lib/data';
 import { FilePlus, MoreHorizontal } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
 
 export default function ManageQuizzesPage() {
     const router = useRouter();
+    const { toast } = useToast();
     const [quizzes, setQuizzes] = useState<Quiz[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isAlertOpen, setIsAlertOpen] = useState(false);
+    const [quizToDelete, setQuizToDelete] = useState<Quiz | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     useEffect(() => {
         const fetchQuizzes = async () => {
@@ -28,19 +34,63 @@ export default function ManageQuizzesPage() {
                 setQuizzes(quizzesData);
             } catch (error) {
                 console.error("Error fetching quizzes:", error);
+                toast({ variant: 'destructive', title: 'Error', description: 'Could not fetch quizzes.' });
             } finally {
                 setLoading(false);
             }
         };
         fetchQuizzes();
-    }, []);
+    }, [toast]);
+
+    const handleDeleteClick = (quiz: Quiz) => {
+        setQuizToDelete(quiz);
+        setIsAlertOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!quizToDelete) return;
+        setIsDeleting(true);
+        try {
+            await deleteDoc(doc(firestore, 'quizzes', quizToDelete.id));
+            setQuizzes(prevQuizzes => prevQuizzes.filter(q => q.id !== quizToDelete.id));
+            toast({
+                title: 'Quiz Deleted',
+                description: `"${quizToDelete.title}" has been permanently removed.`,
+            });
+        } catch (error) {
+            console.error("Error deleting quiz:", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not delete the quiz.' });
+        } finally {
+            setIsDeleting(false);
+            setIsAlertOpen(false);
+            setQuizToDelete(null);
+        }
+    };
 
     return (
+        <>
+        <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete the quiz "{quizToDelete?.title}" and all associated results.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleConfirmDelete} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+                        {isDeleting ? 'Deleting...' : 'Delete'}
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
         <div className="space-y-8">
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Manage Quizzes</h1>
-                    <p className="text-muted-foreground">View, edit, or update existing quizzes.</p>
+                    <p className="text-muted-foreground">View, edit, or delete existing quizzes.</p>
                 </div>
                  <Link href="/admin/upload" passHref>
                     <Button>
@@ -97,6 +147,10 @@ export default function ManageQuizzesPage() {
                                                         <DropdownMenuItem onClick={() => router.push(`/admin/quizzes/edit/${quiz.id}`)}>
                                                             Edit
                                                         </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem className="text-destructive focus:bg-destructive/10 focus:text-destructive" onClick={() => handleDeleteClick(quiz)}>
+                                                            Delete
+                                                        </DropdownMenuItem>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
                                             </TableCell>
@@ -115,5 +169,6 @@ export default function ManageQuizzesPage() {
                 </CardContent>
             </Card>
         </div>
+        </>
     );
 }
