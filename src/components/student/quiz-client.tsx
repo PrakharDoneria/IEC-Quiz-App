@@ -79,6 +79,8 @@ export function QuizClient({ quiz, questionNumber }: QuizClientProps) {
   const isMobile = useIsMobile();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submitHasBeenCalled = useRef(false);
+  const [warnings, setWarnings] = useState(0);
+  const MAX_WARNINGS = 3;
   
   const [answers, setAnswers] = useState<Answers>(() => {
     if (typeof window !== 'undefined') {
@@ -133,6 +135,53 @@ export function QuizClient({ quiz, questionNumber }: QuizClientProps) {
       handleSubmit(true); // true indicates auto-submission
     }
   }, [timeUpAlertOpen]);
+
+  const handleCheatingAttempt = (e: Event) => {
+    e.preventDefault();
+    const newWarningCount = warnings + 1;
+    setWarnings(newWarningCount);
+
+    if (newWarningCount >= MAX_WARNINGS) {
+        toast({
+            variant: 'destructive',
+            title: `Final Warning: Quiz Canceled`,
+            description: `You have exceeded the maximum number of warnings. Your quiz will be submitted as is.`,
+        });
+        handleSubmit(true);
+    } else {
+        toast({
+            variant: 'destructive',
+            title: `Warning ${newWarningCount} of ${MAX_WARNINGS}`,
+            description: 'This activity is prohibited during the quiz. Continuing will result in cancellation.',
+        });
+    }
+};
+
+useEffect(() => {
+    const handleContextmenu = (e: MouseEvent) => handleCheatingAttempt(e);
+    const handleCopy = (e: ClipboardEvent) => handleCheatingAttempt(e);
+    const handleKeydown = (e: KeyboardEvent) => {
+        // Block Ctrl+C, Ctrl+X, Ctrl+V
+        if ((e.ctrlKey || e.metaKey) && ['c', 'x', 'v'].includes(e.key.toLowerCase())) {
+            handleCheatingAttempt(e);
+        }
+        // Block Tab key
+        if (e.key === 'Tab') {
+            handleCheatingAttempt(e);
+        }
+    };
+    
+    document.addEventListener('contextmenu', handleContextmenu);
+    document.addEventListener('copy', handleCopy);
+    document.addEventListener('keydown', handleKeydown);
+    
+    return () => {
+        document.removeEventListener('contextmenu', handleContextmenu);
+        document.removeEventListener('copy', handleCopy);
+        document.removeEventListener('keydown', handleKeydown);
+    };
+}, [warnings]);
+
 
   if (currentQuestionIndex < 0 || currentQuestionIndex >= quiz.questions.length) {
     return notFound();
@@ -201,6 +250,8 @@ export function QuizClient({ quiz, questionNumber }: QuizClientProps) {
             score: score,
             total: quiz.questions.length,
             createdAt: serverTimestamp(),
+            answers: answers,
+            warnings: isAutoSubmit ? warnings + 1 : warnings,
         };
 
         const docRef = await addDoc(collection(firestore, "results"), resultData);
@@ -210,7 +261,9 @@ export function QuizClient({ quiz, questionNumber }: QuizClientProps) {
             sessionStorage.removeItem(`quiz-${quiz.id}-endTime`);
         }
         
-        if (isAutoSubmit) {
+        if (isAutoSubmit && !timeUpAlertOpen) {
+            // This case handles auto-submit from cheating, not timeout
+        } else if (isAutoSubmit) {
             toast({
                 title: "Time's Up!",
                 description: "Your quiz has been automatically submitted."
@@ -350,3 +403,5 @@ export function QuizClient({ quiz, questionNumber }: QuizClientProps) {
     </div>
   );
 }
+
+    
