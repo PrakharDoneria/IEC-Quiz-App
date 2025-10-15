@@ -328,7 +328,7 @@ useEffect(() => {
             </CardContent>
         </Card>
 
-        <Card className="flex-1">
+        <Card>
             <CardHeader className="p-4">
                 <CardTitle className="text-lg">Questions</CardTitle>
             </CardHeader>
@@ -343,7 +343,9 @@ useEffect(() => {
             </CardContent>
         </Card>
         
-        <FinalSubmitButton />
+        <div className="mt-auto">
+            <FinalSubmitButton />
+        </div>
     </div>
   );
 
@@ -425,5 +427,3 @@ useEffect(() => {
     </div>
   );
 }
-
-    
