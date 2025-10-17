@@ -15,6 +15,7 @@ import { firestore } from '@/lib/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Label } from '@/components/ui/label';
 
 const profileSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -42,7 +43,12 @@ export default function ProfilePage() {
 
   const handleEditToggle = () => {
     if (isEditing) {
-      form.reset(); // Reset form if canceling edit
+      form.reset({
+        name: userProfile?.name || '',
+        schoolName: userProfile?.schoolName || '',
+        boardRollNumber: userProfile?.boardRollNumber || '',
+        mobile: userProfile?.mobile || '',
+      }); // Reset form if canceling edit
     }
     setIsEditing(!isEditing);
   };
