@@ -20,6 +20,7 @@ import { Eye, EyeOff } from 'lucide-react';
 const signupSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   schoolName: z.string().min(3, { message: 'School name is required.' }),
+  boardRollNumber: z.string().min(5, { message: '10th board roll number is required.'}),
   email: z.string().email({ message: 'Please enter a valid email.' }),
   mobile: z.string().regex(/^\d{10}$/, { message: 'Please enter a valid 10-digit mobile number.' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
@@ -37,6 +38,7 @@ export default function SignupPage() {
     defaultValues: {
       name: '',
       schoolName: '',
+      boardRollNumber: '',
       email: '',
       mobile: '',
       password: '',
@@ -54,6 +56,7 @@ export default function SignupPage() {
             uid: user.uid,
             name: values.name,
             schoolName: values.schoolName,
+            boardRollNumber: values.boardRollNumber,
             email: values.email,
             mobile: values.mobile,
             role: 'student',
@@ -103,6 +106,19 @@ export default function SignupPage() {
                     <FormLabel>School Name</FormLabel>
                     <FormControl>
                       <Input placeholder="Springfield High" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="boardRollNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>10th Board Roll Number</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter your 10th board roll number" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

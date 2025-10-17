@@ -78,11 +78,12 @@ export default function ExportPage() {
                 return;
             }
 
-            const dataToExport = students.map(({ name, schoolName, email, mobile }) => ({
+            const dataToExport = students.map(({ name, schoolName, email, mobile, boardRollNumber }) => ({
                 'Name': name,
                 'School': schoolName,
                 'Email': email,
                 'Mobile': mobile,
+                'Board Roll Number': boardRollNumber || 'N/A',
             }));
 
             const XLSX = await import('xlsx');
@@ -229,5 +230,3 @@ export default function ExportPage() {
         </div>
     );
 }
-
-    

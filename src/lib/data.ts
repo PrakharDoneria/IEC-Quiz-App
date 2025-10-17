@@ -22,6 +22,7 @@ export type Result = {
   score: number;
   total: number;
   createdAt: any;
+  timeTaken?: number; // Time in seconds
 };
 
 export type UserProfile = {
@@ -31,4 +32,5 @@ export type UserProfile = {
     schoolName: string;
     mobile: string;
     role: 'student' | 'admin';
+    boardRollNumber: string;
 }

@@ -4,13 +4,13 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StudentLayout } from '@/components/student/student-layout';
 import { useToast } from '@/hooks/use-toast';
 import { firestore } from '@/lib/firebase';
-import { collection, getDocs, query, where, limit, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, where, limit, doc, updateDoc } from 'firebase/firestore';
 import { useAuth } from '@/hooks/use-auth';
 import { LogIn, History } from 'lucide-react';
 import type { Result } from '@/lib/data';
@@ -18,6 +18,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
+import { UpdateRollNumberDialog } from '@/components/student/update-roll-number-dialog';
+
 
 interface PastResult extends Result {
   quizTitle: string;
@@ -26,11 +28,23 @@ interface PastResult extends Result {
 export default function StudentDashboard() {
   const router = useRouter();
   const { toast } = useToast();
-  const { user, userProfile } = useAuth();
+  const { user, userProfile, loading: authLoading } = useAuth();
   const [quizCode, setQuizCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [recentResults, setRecentResults] = useState<PastResult[]>([]);
   const [loadingResults, setLoadingResults] = useState(true);
+  const [showRollNumberDialog, setShowRollNumberDialog] = useState(false);
+
+
+  useEffect(() => {
+    if (!authLoading && user && userProfile) {
+        if (!userProfile.boardRollNumber) {
+            setShowRollNumberDialog(true);
+        } else {
+            setShowRollNumberDialog(false);
+        }
+    }
+  }, [user, userProfile, authLoading]);
 
   useEffect(() => {
     if (user) {
@@ -79,6 +93,25 @@ export default function StudentDashboard() {
       fetchRecentResults();
     }
   }, [user]);
+  
+  const handleRollNumberUpdate = async (rollNumber: string) => {
+    if (!user) return;
+    try {
+      await updateDoc(doc(firestore, 'users', user.uid), {
+        boardRollNumber: rollNumber,
+      });
+      toast({ title: 'Success', description: 'Your roll number has been updated.' });
+      setShowRollNumberDialog(false);
+    } catch (error) {
+      console.error('Failed to update roll number', error);
+      toast({
+        variant: 'destructive',
+        title: 'Update Failed',
+        description: 'Could not save your roll number. Please try again.',
+      });
+    }
+  };
+
 
   const handleStartQuiz = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,6 +175,10 @@ export default function StudentDashboard() {
 
   return (
     <StudentLayout>
+      <UpdateRollNumberDialog 
+        open={showRollNumberDialog}
+        onSave={handleRollNumberUpdate}
+      />
       <div className="flex-1 space-y-8 p-4 sm:p-6 lg:p-8">
         <div className="space-y-2">
             <h1 className="text-3xl font-bold tracking-tight">Welcome, {userProfile?.name?.split(' ')[0] || 'Student'}!</h1>

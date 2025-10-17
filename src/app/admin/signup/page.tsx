@@ -63,6 +63,7 @@ export default function AdminSignupPage() {
             role: 'admin',
             schoolName: 'IEC Admin', // Placeholder or could be omitted
             mobile: '', // Placeholder or could be omitted
+            boardRollNumber: '', // Placeholder for admins
         });
 
         toast({ title: 'Admin Account Created', description: 'Verification email sent! Please check your inbox.' });
