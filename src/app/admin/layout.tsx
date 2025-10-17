@@ -137,8 +137,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <SidebarFooter className='items-center'>
            <div className='flex items-center gap-2 w-full p-2 rounded-md hover:bg-sidebar-accent transition-colors'>
                 <Avatar className="h-8 w-8">
-                    <AvatarImage src={userProfile?.name ? `https://i.pravatar.cc/150?u=${user?.uid}` : undefined} alt={userProfile?.name || 'Admin'} />
-                    <AvatarFallback>{userProfile?.name?.[0] || 'A'}</AvatarFallback>
+                    <AvatarFallback>{userProfile?.name?.[0]?.toUpperCase() || 'A'}</AvatarFallback>
                 </Avatar>
                 <div className='flex flex-col text-left group-data-[collapsible=icon]:hidden'>
                     {loading ? (

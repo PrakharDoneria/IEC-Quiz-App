@@ -71,8 +71,8 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                                 <Avatar className="h-8 w-8">
-                                    <AvatarImage src={`https://i.pravatar.cc/150?u=${user?.uid}`} alt={userProfile?.name} />
-                                    <AvatarFallback>{userProfile?.name?.[0] || 'S'}</AvatarFallback>
+                                    
+                                    <AvatarFallback>{userProfile?.name?.[0]?.toUpperCase() || 'S'}</AvatarFallback>
                                 </Avatar>
                             </Button>
                         </DropdownMenuTrigger>
@@ -96,6 +96,10 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
                             <DropdownMenuItem onClick={() => router.push('/student/dashboard')}>
                                 <UserIcon className="mr-2 h-4 w-4" />
                                 <span>Dashboard</span>
+                            </DropdownMenuItem>
+                             <DropdownMenuItem onClick={() => router.push('/student/profile')}>
+                                <UserIcon className="mr-2 h-4 w-4" />
+                                <span>Profile</span>
                             </DropdownMenuItem>
                              <DropdownMenuItem onClick={() => router.push('/student/results')}>
                                 <BarChart2 className="mr-2 h-4 w-4" />
