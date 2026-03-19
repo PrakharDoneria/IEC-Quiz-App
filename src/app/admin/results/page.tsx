@@ -70,29 +70,44 @@ export default function AdminResultsPage() {
 
     const topStudentsData: Result[] = [];
     Object.values(studentsBySchool).forEach(schoolResults => {
-      const sorted = schoolResults.sort((a, b) => b.score - a.score);
+      // Sort by score (desc), then by timeTaken (asc) as tie-breaker
+      const sorted = schoolResults.sort((a, b) => {
+        if (b.score !== a.score) {
+            return b.score - a.score;
+        }
+        return (a.timeTaken || 0) - (b.timeTaken || 0);
+      });
       topStudentsData.push(...sorted.slice(0, 3));
     });
     
     return topStudentsData.sort((a,b) => {
         if (a.schoolName < b.schoolName) return -1;
         if (a.schoolName > b.schoolName) return 1;
-        return b.score - a.score;
+        // Within same school, maintain score/time order
+        if (b.score !== a.score) return b.score - a.score;
+        return (a.timeTaken || 0) - (b.timeTaken || 0);
     });
 
   }, [results]);
+
+  const formatSeconds = (seconds?: number) => {
+    if (seconds === undefined) return 'N/A';
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}m ${s}s`;
+  };
 
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Quiz Results</h1>
-        <p className="text-muted-foreground">View top performers for each quiz.</p>
+        <p className="text-muted-foreground">View top performers for each quiz (Top 3 per School).</p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Top 3 Students per School</CardTitle>
-          <CardDescription>Select a quiz to see the results.</CardDescription>
+          <CardTitle>Leaderboard</CardTitle>
+          <CardDescription>Ranked by Score, then by fastest completion time.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="max-w-xs">
@@ -118,25 +133,27 @@ export default function AdminResultsPage() {
                 <TableRow>
                   <TableHead>School Name</TableHead>
                   <TableHead>Student Name</TableHead>
+                  <TableHead className="text-right">Time Taken</TableHead>
                   <TableHead className="text-right">Score</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                     <TableRow>
-                        <TableCell colSpan={3} className="text-center">Loading results...</TableCell>
+                        <TableCell colSpan={4} className="text-center">Loading results...</TableCell>
                     </TableRow>
                 ) : topStudents.length > 0 ? (
                   topStudents.map((result) => (
                     <TableRow key={result.id}>
                       <TableCell className="font-medium">{result.schoolName}</TableCell>
                       <TableCell>{result.studentName}</TableCell>
-                      <TableCell className="text-right">{result.score}</TableCell>
+                      <TableCell className="text-right">{formatSeconds(result.timeTaken)}</TableCell>
+                      <TableCell className="text-right font-bold text-primary">{result.score}</TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center">
+                    <TableCell colSpan={4} className="text-center">
                       No results to display for this quiz.
                     </TableCell>
                   </TableRow>

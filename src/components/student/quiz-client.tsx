@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -14,8 +13,8 @@ import { firestore, auth } from '@/lib/firebase';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
-import { PanelLeft, Clock, HelpCircle, Send } from 'lucide-react';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger, DrawerDescription, DrawerFooter } from '@/components/ui/drawer';
+import { PanelLeft, Clock, Send } from 'lucide-react';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger, DrawerDescription } from '@/components/ui/drawer';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -70,6 +69,47 @@ function QuestionPalette({
                 );
             })}
         </div>
+    );
+}
+
+// Extracted to prevent re-creation and state loss on re-renders
+function SubmitQuizDialog({ 
+    isSubmitting, 
+    onSubmit, 
+    attemptedCount, 
+    totalCount 
+}: { 
+    isSubmitting: boolean; 
+    onSubmit: () => void; 
+    attemptedCount: number; 
+    totalCount: number;
+}) {
+    return (
+        <AlertDialog>
+            <AlertDialogTrigger asChild>
+                <Button 
+                  className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" 
+                  disabled={isSubmitting}
+                >
+                    <Send className="mr-2 h-4 w-4" />
+                    {isSubmitting ? 'Submitting...' : 'Submit Quiz'}
+                </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure you want to submit?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        You have attempted {attemptedCount} out of {totalCount} questions. You cannot change your answers after submitting.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={onSubmit} className="bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isSubmitting}>
+                        {isSubmitting ? 'Submitting...' : 'Confirm & Submit'}
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     );
 }
 
@@ -134,7 +174,7 @@ export function QuizClient({ quiz, questionNumber }: QuizClientProps) {
 
   useEffect(() => {
     if (timeUpAlertOpen && !submitHasBeenCalled.current) {
-      handleSubmit(true); // true indicates auto-submission
+      handleSubmit(true); 
     }
   }, [timeUpAlertOpen]);
 
@@ -163,11 +203,9 @@ useEffect(() => {
     const handleContextmenu = (e: MouseEvent) => handleCheatingAttempt(e);
     const handleCopy = (e: ClipboardEvent) => handleCheatingAttempt(e);
     const handleKeydown = (e: KeyboardEvent) => {
-        // Block Ctrl+C, Ctrl+X, Ctrl+V
         if ((e.ctrlKey || e.metaKey) && ['c', 'x', 'v'].includes(e.key.toLowerCase())) {
             handleCheatingAttempt(e);
         }
-        // Block Tab key
         if (e.key === 'Tab') {
             handleCheatingAttempt(e);
         }
@@ -243,6 +281,7 @@ useEffect(() => {
             schoolName: userProfile.schoolName,
             score: score,
             total: quiz.questions.length,
+            timeTaken: quiz.duration - timeLeft,
             createdAt: serverTimestamp(),
             answers: answers,
             warnings: isAutoSubmit ? warnings + 1 : warnings,
@@ -256,7 +295,7 @@ useEffect(() => {
         }
         
         if (isAutoSubmit && !timeUpAlertOpen) {
-            // This case handles auto-submit from cheating, not timeout
+            // Cheating auto-submit
         } else if (isAutoSubmit) {
             toast({
                 title: "Time's Up!",
@@ -277,35 +316,6 @@ useEffect(() => {
     }
   };
 
-  const FinalSubmitButton = ({ isDrawer = false }) => (
-    <AlertDialog>
-        <AlertDialogTrigger asChild>
-            <Button 
-              className={cn("w-full bg-accent hover:bg-accent/90 text-accent-foreground", isDrawer && "mt-4")} 
-              disabled={isSubmitting}
-            >
-                <Send className="mr-2 h-4 w-4" />
-                {isSubmitting ? 'Submitting...' : 'Submit Quiz'}
-            </Button>
-        </AlertDialogTrigger>
-        <AlertDialogContent>
-            <AlertDialogHeader>
-                <AlertDialogTitle>Are you sure you want to submit?</AlertDialogTitle>
-                <AlertDialogDescription>
-                    You have attempted {Object.keys(answers).length} out of {quiz.questions.length} questions. You cannot change your answers after submitting.
-                </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => handleSubmit(false)} className="bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isSubmitting}>
-                    {isSubmitting ? 'Submitting...' : 'Confirm & Submit'}
-                </AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-    </AlertDialog>
-  );
-
-  
   const controlPanel = (
     <div className="flex flex-col h-full space-y-6">
         <div>
@@ -328,7 +338,12 @@ useEffect(() => {
             </CardContent>
         </Card>
 
-        <FinalSubmitButton />
+        <SubmitQuizDialog 
+            isSubmitting={isSubmitting} 
+            onSubmit={() => handleSubmit(false)} 
+            attemptedCount={Object.keys(answers).length} 
+            totalCount={quiz.questions.length} 
+        />
 
         <Card className="flex-1 overflow-y-auto">
             <CardHeader className="p-4">
