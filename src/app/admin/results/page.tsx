@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Quiz, Result } from '@/lib/data';
 import { firestore } from '@/lib/firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
+import { cn } from '@/lib/utils';
 
 export default function AdminResultsPage() {
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
