@@ -135,12 +135,13 @@ export default function AdminResultsPage() {
                   <TableHead>Student Name</TableHead>
                   <TableHead className="text-right">Time Taken</TableHead>
                   <TableHead className="text-right">Score</TableHead>
+                  <TableHead className="text-right">Warnings</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                     <TableRow>
-                        <TableCell colSpan={4} className="text-center">Loading results...</TableCell>
+                        <TableCell colSpan={5} className="text-center">Loading results...</TableCell>
                     </TableRow>
                 ) : topStudents.length > 0 ? (
                   topStudents.map((result) => (
@@ -149,11 +150,16 @@ export default function AdminResultsPage() {
                       <TableCell>{result.studentName}</TableCell>
                       <TableCell className="text-right">{formatSeconds(result.timeTaken)}</TableCell>
                       <TableCell className="text-right font-bold text-primary">{result.score}</TableCell>
+                      <TableCell className="text-right">
+                          <span className={cn("px-2 py-0.5 rounded-full text-xs font-bold", (result.warnings || 0) > 0 ? "bg-destructive/10 text-destructive" : "bg-green-100 text-green-700")}>
+                              {result.warnings || 0}
+                          </span>
+                      </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center">
+                    <TableCell colSpan={5} className="text-center">
                       No results to display for this quiz.
                     </TableCell>
                   </TableRow>

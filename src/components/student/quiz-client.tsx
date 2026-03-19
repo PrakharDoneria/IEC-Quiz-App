@@ -13,7 +13,7 @@ import { firestore, auth } from '@/lib/firebase';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
-import { PanelLeft, Clock, Send } from 'lucide-react';
+import { PanelLeft, Clock, Send, AlertTriangle } from 'lucide-react';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger, DrawerDescription } from '@/components/ui/drawer';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -50,7 +50,9 @@ function QuestionPalette({
         <div className="grid grid-cols-5 md:grid-cols-4 lg:grid-cols-5 gap-2">
             {Array.from({ length: totalQuestions }).map((_, i) => {
                 const questionId = quiz.questions[i].id;
+                const answerValue = answers[questionId];
                 const isAttempted = answers.hasOwnProperty(questionId);
+                const isCheated = answerValue === "CHEATING_DETECTED";
                 const isCurrent = i === currentQuestionIndex;
 
                 return (
@@ -60,7 +62,7 @@ function QuestionPalette({
                         className={cn(
                             "h-10 w-10 p-0",
                              isCurrent && "ring-2 ring-primary-foreground ring-offset-2 ring-offset-primary",
-                             isAttempted && !isCurrent ? 'bg-green-600 hover:bg-green-700 text-white': ''
+                             isAttempted && !isCurrent ? (isCheated ? 'bg-destructive hover:bg-destructive/90 text-white' : 'bg-green-600 hover:bg-green-700 text-white'): ''
                         )}
                         onClick={() => onQuestionSelect(i + 1)}
                     >
@@ -72,7 +74,6 @@ function QuestionPalette({
     );
 }
 
-// Extracted to prevent re-creation and state loss on re-renders
 function SubmitQuizDialog({ 
     isSubmitting, 
     onSubmit, 
@@ -122,6 +123,8 @@ export function QuizClient({ quiz, questionNumber }: QuizClientProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submitHasBeenCalled = useRef(false);
   const [warnings, setWarnings] = useState(0);
+  const [showWarningDialog, setShowWarningDialog] = useState(false);
+  const [warningMessage, setWarningMessage] = useState("");
   const MAX_WARNINGS = 3;
   
   const [answers, setAnswers] = useState<Answers>(() => {
@@ -136,7 +139,8 @@ export function QuizClient({ quiz, questionNumber }: QuizClientProps) {
   const [timeUpAlertOpen, setTimeUpAlertOpen] = useState(false);
   
   const currentQuestionIndex = questionNumber - 1;
-  
+  const currentQuestion = quiz.questions[currentQuestionIndex];
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
         sessionStorage.setItem(`quiz-${quiz.id}-answers`, JSON.stringify(answers));
@@ -178,59 +182,70 @@ export function QuizClient({ quiz, questionNumber }: QuizClientProps) {
     }
   }, [timeUpAlertOpen]);
 
-  const handleCheatingAttempt = (e: Event) => {
-    e.preventDefault();
+  const handleCheatingAttempt = (e?: Event, reason?: string) => {
+    if (e) e.preventDefault();
+    
+    // Auto-cross the current question
+    setAnswers(prev => ({
+        ...prev,
+        [currentQuestion.id]: "CHEATING_DETECTED"
+    }));
+
     const newWarningCount = warnings + 1;
     setWarnings(newWarningCount);
+    setWarningMessage(reason || "Prohibited activity detected (Copying/Tab Switching). The current question has been marked as invalid.");
+    setShowWarningDialog(true);
 
     if (newWarningCount >= MAX_WARNINGS) {
         toast({
             variant: 'destructive',
-            title: `Final Warning: Quiz Canceled`,
-            description: `You have exceeded the maximum number of warnings. Your quiz will be submitted as is.`,
+            title: `Final Warning: Quiz Submitting`,
+            description: `You have exceeded the maximum number of warnings. Your quiz is being submitted.`,
         });
         handleSubmit(true);
-    } else {
-        toast({
-            variant: 'destructive',
-            title: `Warning ${newWarningCount} of ${MAX_WARNINGS}`,
-            description: 'This activity is prohibited during the quiz. Continuing will result in cancellation.',
-        });
     }
-};
+  };
 
-useEffect(() => {
-    const handleContextmenu = (e: MouseEvent) => handleCheatingAttempt(e);
-    const handleCopy = (e: ClipboardEvent) => handleCheatingAttempt(e);
+  useEffect(() => {
+    const handleContextmenu = (e: MouseEvent) => handleCheatingAttempt(e, "Right-clicking is not allowed.");
+    const handleCopy = (e: ClipboardEvent) => handleCheatingAttempt(e, "Copying text is not allowed.");
     const handleKeydown = (e: KeyboardEvent) => {
         if ((e.ctrlKey || e.metaKey) && ['c', 'x', 'v'].includes(e.key.toLowerCase())) {
-            handleCheatingAttempt(e);
+            handleCheatingAttempt(e, "Copy/Paste shortcuts are not allowed.");
         }
         if (e.key === 'Tab') {
-            handleCheatingAttempt(e);
+            handleCheatingAttempt(e, "Keyboard navigation (Tab key) is restricted during the quiz.");
+        }
+    };
+    const handleVisibilityChange = () => {
+        if (document.visibilityState === 'hidden') {
+            handleCheatingAttempt(undefined, "Switching tabs or minimizing the browser is strictly prohibited.");
         }
     };
     
     document.addEventListener('contextmenu', handleContextmenu);
     document.addEventListener('copy', handleCopy);
     document.addEventListener('keydown', handleKeydown);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     
     return () => {
         document.removeEventListener('contextmenu', handleContextmenu);
         document.removeEventListener('copy', handleCopy);
         document.removeEventListener('keydown', handleKeydown);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-}, [warnings]);
+  }, [warnings, currentQuestion.id]);
 
 
   if (currentQuestionIndex < 0 || currentQuestionIndex >= quiz.questions.length) {
     return notFound();
   }
   
-  const currentQuestion = quiz.questions[currentQuestionIndex];
   const progress = (Object.keys(answers).length / quiz.questions.length) * 100;
 
   const handleOptionChange = (questionId: string, option: string) => {
+    // Prevent changing answer if already "crossed" by cheating
+    if (answers[questionId] === "CHEATING_DETECTED") return;
     setAnswers(prev => ({ ...prev, [questionId]: option }));
   };
 
@@ -256,11 +271,6 @@ useEffect(() => {
     setIsSubmitting(true);
 
     if (!user || !userProfile) {
-        toast({
-            variant: "destructive",
-            title: "Not Authenticated",
-            description: "You must be logged in to submit a quiz.",
-        });
         setIsSubmitting(false);
         router.push('/login');
         return;
@@ -284,7 +294,7 @@ useEffect(() => {
             timeTaken: quiz.duration - timeLeft,
             createdAt: serverTimestamp(),
             answers: answers,
-            warnings: isAutoSubmit ? warnings + 1 : warnings,
+            warnings: warnings,
         };
 
         const docRef = await addDoc(collection(firestore, "results"), resultData);
@@ -294,15 +304,6 @@ useEffect(() => {
             sessionStorage.removeItem(`quiz-${quiz.id}-endTime`);
         }
         
-        if (isAutoSubmit && !timeUpAlertOpen) {
-            // Cheating auto-submit
-        } else if (isAutoSubmit) {
-            toast({
-                title: "Time's Up!",
-                description: "Your quiz has been automatically submitted."
-            });
-        }
-
         router.push(`/student/result/${docRef.id}?score=${score}&total=${quiz.questions.length}`);
     } catch (error: any) {
         console.error("Error submitting quiz result: ", error);
@@ -377,12 +378,39 @@ useEffect(() => {
               </AlertDialogFooter>
           </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={showWarningDialog} onOpenChange={setShowWarningDialog}>
+          <AlertDialogContent className="border-destructive">
+              <AlertDialogHeader>
+                  <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+                      <AlertTriangle className="h-6 w-6" />
+                      Cheating Warning {warnings} of {MAX_WARNINGS}
+                  </AlertDialogTitle>
+                  <AlertDialogDescription className="text-lg font-medium text-foreground">
+                      {warningMessage}
+                  </AlertDialogDescription>
+              </AlertDialogHeader>
+              <div className="bg-destructive/10 p-4 rounded-md text-destructive font-bold text-center">
+                  WARNING: The current question has been automatically crossed and marked as WRONG.
+              </div>
+              <AlertDialogFooter>
+                   <AlertDialogAction className="bg-destructive hover:bg-destructive/90 text-white">
+                       I Understand
+                   </AlertDialogAction>
+              </AlertDialogFooter>
+          </AlertDialogContent>
+      </AlertDialog>
       
       <div className="flex-1 flex flex-col justify-center items-center py-6">
         <div className="w-full max-w-2xl space-y-4">
-            <Card className="shadow-lg animate-in fade-in">
+            <Card className={cn("shadow-lg animate-in fade-in", answers[currentQuestion.id] === "CHEATING_DETECTED" && "border-destructive opacity-80")}>
                 <CardHeader>
-                    <p className="text-sm text-muted-foreground mb-2">Question {currentQuestionIndex + 1} of {quiz.questions.length}</p>
+                    <div className="flex justify-between items-start">
+                        <p className="text-sm text-muted-foreground mb-2">Question {currentQuestionIndex + 1} of {quiz.questions.length}</p>
+                        {answers[currentQuestion.id] === "CHEATING_DETECTED" && (
+                            <span className="bg-destructive text-destructive-foreground text-[10px] px-2 py-0.5 rounded-full font-bold uppercase">INVALID</span>
+                        )}
+                    </div>
                     <CardTitle className="text-xl md:text-2xl">{currentQuestion.question}</CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -390,14 +418,23 @@ useEffect(() => {
                         value={answers[currentQuestion.id] || ''}
                         onValueChange={(value) => handleOptionChange(currentQuestion.id, value)}
                         className="space-y-3"
+                        disabled={answers[currentQuestion.id] === "CHEATING_DETECTED"}
                     >
                         {currentQuestion.options.map((option, index) => (
-                            <div key={index} className="flex items-center space-x-3 rounded-lg border p-4 transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5 has-[:checked]:shadow-sm">
-                                <RadioGroupItem value={option} id={`${currentQuestion.id}-${index}`} />
+                            <div key={index} className={cn(
+                                "flex items-center space-x-3 rounded-lg border p-4 transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5 has-[:checked]:shadow-sm",
+                                answers[currentQuestion.id] === "CHEATING_DETECTED" && "cursor-not-allowed grayscale"
+                            )}>
+                                <RadioGroupItem value={option} id={`${currentQuestion.id}-${index}`} disabled={answers[currentQuestion.id] === "CHEATING_DETECTED"} />
                                 <Label htmlFor={`${currentQuestion.id}-${index}`} className="flex-1 cursor-pointer text-base">{option}</Label>
                             </div>
                         ))}
                     </RadioGroup>
+                    {answers[currentQuestion.id] === "CHEATING_DETECTED" && (
+                        <p className="mt-4 text-sm text-destructive font-semibold text-center italic">
+                            This question was invalidated due to a security violation.
+                        </p>
+                    )}
                 </CardContent>
             </Card>
             <div className="flex justify-between mt-6">

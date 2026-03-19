@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -120,12 +119,14 @@ export default function ExportPage() {
                 return;
             }
 
-             const dataToExport = filteredResults.map(({ studentName, schoolName, score, total }) => ({
+             const dataToExport = filteredResults.map(({ studentName, schoolName, score, total, timeTaken, warnings }) => ({
                 'Student Name': studentName,
                 'School Name': schoolName,
                 'Score': score,
                 'Total Marks': total,
                 'Percentage': total > 0 ? ((score / total) * 100).toFixed(2) + '%' : '0%',
+                'Time Taken (sec)': timeTaken || 0,
+                'Warnings': warnings || 0,
             }));
             
             const XLSX = await import('xlsx');

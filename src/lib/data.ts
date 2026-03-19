@@ -23,6 +23,7 @@ export type Result = {
   total: number;
   createdAt: any;
   timeTaken?: number; // Time in seconds
+  warnings?: number;
 };
 
 export type UserProfile = {
